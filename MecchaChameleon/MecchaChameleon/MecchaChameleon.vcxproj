@@ -51,7 +51,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -141,11 +141,14 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.cpp" />
     <ClCompile Include="MecchaChameleon\main.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\Memory\Memory.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\Memory\Memory.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\offsets.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

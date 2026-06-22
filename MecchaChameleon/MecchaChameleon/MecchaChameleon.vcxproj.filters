@@ -21,9 +21,18 @@
     <ClCompile Include="MecchaChameleon\Engine\Memory\Memory.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MecchaChameleon\Engine\Memory\Memory.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MecchaChameleon\Engine\offsets.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
