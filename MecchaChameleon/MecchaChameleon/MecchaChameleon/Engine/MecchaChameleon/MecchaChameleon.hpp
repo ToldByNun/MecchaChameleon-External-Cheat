@@ -2,6 +2,7 @@
 #define	MECCHACHAMELEON_HPP
 
 #include "../Memory/Memory.hpp"
+#include "../types.hpp"
 #include <string>
 #include <iomanip>
 #include <iostream>
@@ -14,6 +15,12 @@ public:
 public:
     Memory memory;
     uintptr_t world = 0;
+    uintptr_t persistentLevel = 0;
+
+    TArray    actors = {};
+    uintptr_t actor = 0;
+    uintptr_t actorClass = 0;
+    FName     className = {};
 
 private:
 	bool resolveChain();
