@@ -18,9 +18,16 @@ namespace Offsets {
 			struct SActor {
 				static constexpr uintptr_t Class = 0x10;
 				static constexpr uintptr_t Name = 0x18;
+				static constexpr uintptr_t RootComponent = 0x1B8;
+
+				struct SComponent {
+					static constexpr uintptr_t RelativeLocation = 0x140;
+					static constexpr uintptr_t RelativeRotation = 0x158;
+					static constexpr uintptr_t RelativeScale3D = 0x170;
+				};
 			};
 		};
 	};
 }
 
-#endif OFFSETS_HPP
+#endif // OFFSETS_HPP

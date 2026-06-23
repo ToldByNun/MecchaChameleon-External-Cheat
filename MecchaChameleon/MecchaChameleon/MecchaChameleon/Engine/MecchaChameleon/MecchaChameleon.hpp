@@ -22,6 +22,12 @@ public:
 
     TArray    actors = {};
     uintptr_t actor = 0;
+
+    uintptr_t rootComponent = 0;
+    FVector   relativeLocation = {};
+    FVector   relativeRotation = {};
+    FVector   relativeScale3D = {};
+
     uintptr_t actorClass = 0;
     FName     className = {};
 
@@ -94,4 +100,4 @@ private:
     }
 };
 
-#endif MECCHACHAMELEON_HPP
+#endif // MECCHACHAMELEON_HPP

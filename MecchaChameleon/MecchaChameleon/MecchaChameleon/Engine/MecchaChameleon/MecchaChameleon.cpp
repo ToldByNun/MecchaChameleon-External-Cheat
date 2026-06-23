@@ -47,6 +47,20 @@ bool MecchaChameleon::resolveChain() {
 			continue;
 
 		printf("Name: %s\n", this->getNameByPtr(this->actor).c_str());
+
+		this->rootComponent = memory.readMemory<uintptr_t>(this->actor + Offsets::SWorld::SLevel::SActor::RootComponent);
+		if (!this->check(this->rootComponent, "RootComponent"))
+			continue;
+
+		this->relativeLocation = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
+		if (!this->check(this->relativeLocation, "RelativeLocation"))
+			continue;
+		this->relativeRotation = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeRotation);
+		if (!this->check(this->relativeRotation, "RelativeRotation"))
+			continue;
+		this->relativeScale3D = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeScale3D);
+		if (!this->check(this->relativeScale3D, "RelativeScale3D"))
+			continue;
 	}
 
 	return true;

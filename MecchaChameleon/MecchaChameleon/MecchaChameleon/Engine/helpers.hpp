@@ -1,3 +1,6 @@
+#ifndef HELPERS_HPP
+#define HELPERS_HPP
+
 #include "Memory/Memory.hpp"
 #include "offsets.hpp"
 #include <string>
@@ -55,3 +58,5 @@ public:
         return std::string(buffer, length);
     }
 };
+
+#endif // HELPERS_HPP

@@ -33,4 +33,4 @@ public:
 
 };
 
-#endif MEMORY_HPP
+#endif // MEMORY_HPP
