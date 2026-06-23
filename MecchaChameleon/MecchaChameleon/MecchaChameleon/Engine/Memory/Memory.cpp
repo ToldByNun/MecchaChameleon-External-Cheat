@@ -31,6 +31,8 @@ bool Memory::attachToProcess(const char* processName) {
 		return false;
 	}
 
+	this->processId = processId;
+
 	processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
 	if (processHandle == nullptr) {
 		std::cerr << "[-] Failed to open process: " << GetLastError() << std::endl;
@@ -52,10 +54,47 @@ bool Memory::attachToProcess(const char* processName) {
 		return false;
 	}
 
+	windowHandle = findMainWindow();
+
 	std::cout << "[+] Successfully attached to " << processName << "!" << std::endl;
 	std::cout << "[+] PID: " << processId << " | Base: 0x" << std::hex << baseAddress << std::dec << std::endl;
+	if (windowHandle)
+		std::cout << "[+] Game window found." << std::endl;
+	else
+		std::cout << "[!] Game window not found — overlay may fail." << std::endl;
 
 	return true;
+}
+
+HWND Memory::findMainWindow() {
+	if (processId == 0)
+		return nullptr;
+
+	struct EnumData {
+		DWORD pid;
+		HWND hwnd;
+		LONG bestArea;
+	} data = { processId, nullptr, 0 };
+
+	EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL {
+		auto* d = reinterpret_cast<EnumData*>(lParam);
+
+		DWORD windowPid = 0;
+		GetWindowThreadProcessId(hwnd, &windowPid);
+		if (windowPid != d->pid || !IsWindowVisible(hwnd))
+			return TRUE;
+
+		RECT rect{};
+		GetWindowRect(hwnd, &rect);
+		const LONG area = (rect.right - rect.left) * (rect.bottom - rect.top);
+		if (area > d->bestArea) {
+			d->bestArea = area;
+			d->hwnd = hwnd;
+		}
+		return TRUE;
+	}, reinterpret_cast<LPARAM>(&data));
+
+	return data.hwnd;
 }
 
 bool Memory::detachFromProcess() {

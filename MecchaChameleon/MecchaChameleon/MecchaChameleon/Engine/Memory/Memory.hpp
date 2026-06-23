@@ -10,10 +10,12 @@ public:
 	HANDLE processHandle;
 	HWND windowHandle;
 	uintptr_t baseAddress;
+	uint32_t processId = 0;
 
 public:
 
 	uint32_t getProcessIdByName(const char* processName);
+	HWND findMainWindow();
 
 	uintptr_t getModuleBaseAddress(const char* moduleName);
 

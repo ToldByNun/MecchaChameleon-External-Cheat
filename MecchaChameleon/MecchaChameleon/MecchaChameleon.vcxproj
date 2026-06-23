@@ -141,16 +141,36 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\Unreal\Unreal.cpp" />
     <ClCompile Include="MecchaChameleon\main.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\Memory\Memory.cpp" />
+    <ClCompile Include="MecchaChameleon\Modules\Menu\Menu.cpp" />
+    <ClCompile Include="MecchaChameleon\Modules\Overlay\Overlay.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MecchaChameleon\Engine\helpers.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imconfig.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui_impl_dx11.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui_internal.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imstb_textedit.h" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\imstb_truetype.h" />
     <ClInclude Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\Memory\Memory.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\offsets.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\types.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\Unreal\Unreal.hpp" />
+    <ClInclude Include="MecchaChameleon\Modules\Menu\Menu.hpp" />
+    <ClInclude Include="MecchaChameleon\Modules\Overlay\Overlay.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
