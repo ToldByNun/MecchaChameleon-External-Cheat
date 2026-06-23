@@ -17,20 +17,6 @@ public:
     Memory memory;
     Helpers helpers;
 
-    uintptr_t world = 0;
-    uintptr_t persistentLevel = 0;
-
-    TArray    actors = {};
-    uintptr_t actor = 0;
-
-    uintptr_t rootComponent = 0;
-    FVector   relativeLocation = {};
-    FVector   relativeRotation = {};
-    FVector   relativeScale3D = {};
-
-    uintptr_t actorClass = 0;
-    FName     className = {};
-
 private:
     std::string resolveName(uint32_t index) {
         return helpers.resolveName(memory, memory.baseAddress, index);

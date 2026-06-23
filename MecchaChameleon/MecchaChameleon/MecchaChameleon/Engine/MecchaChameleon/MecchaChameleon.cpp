@@ -20,48 +20,68 @@ bool MecchaChameleon::init() {
 }
 
 bool MecchaChameleon::resolveChain() {
-	this->world = memory.readMemory<uintptr_t>(memory.baseAddress + Offsets::GWorld);
-	if (!this->check(this->world, "GWorld")) return false;
+	uintptr_t world = memory.readMemory<uintptr_t>(memory.baseAddress + Offsets::GWorld);
+	if (!this->check(world, "GWorld")) return false;
 
-	this->persistentLevel = memory.readMemory<uintptr_t>(this->world + Offsets::SWorld::PersistentLevel);
-	if (!this->check(this->persistentLevel, "PersistentLevel")) return false;
+	// Persistent Level
+	uintptr_t persistentLevel = memory.readMemory<uintptr_t>(world + Offsets::SWorld::PersistentLevel);
+	if (!this->check(persistentLevel, "PersistentLevel")) return false;
 
-	this->actors = memory.readMemory<TArray>(this->persistentLevel + Offsets::SWorld::SLevel::Actors);
-	if (!this->check(this->actors, "Actors")) return false;
+	TArray actors = memory.readMemory<TArray>(persistentLevel + Offsets::SWorld::SLevel::Actors);
+	if (!this->check(actors, "Actors")) return false;
 
-	for (int i = 0; i < this->actors.count; i++) {
-		this->actor = memory.readMemory<uintptr_t>(
-			this->actors.data + i * sizeof(uintptr_t)
+	for (int i = 0; i < actors.count; i++) {
+		uintptr_t actor = memory.readMemory<uintptr_t>(
+			actors.data + i * sizeof(uintptr_t)
 		);
 
-		if (!this->check(this->actor, "Actor"))
+		if (!this->check(actor, "Actor"))
 			continue;
 
-		this->actorClass = memory.readMemory<uintptr_t>(this->actor + Offsets::SWorld::SLevel::SActor::Class);
+		uintptr_t actorClass = memory.readMemory<uintptr_t>(actor + Offsets::SWorld::SLevel::SActor::Class);
 
-		if (!this->check(this->actorClass, "ActorClass"))
+		if (!this->check(actorClass, "ActorClass"))
 			continue;
 
-		this->className = memory.readMemory<FName>(this->actorClass + Offsets::SWorld::SLevel::SActor::Name);
-		if (!this->check(this->className, "ClassName"))
+		FName className = memory.readMemory<FName>(actorClass + Offsets::SWorld::SLevel::SActor::Name);
+		if (!this->check(className, "ClassName"))
 			continue;
 
-		printf("Name: %s\n", this->getNameByPtr(this->actor).c_str());
+		printf("Name: %s\n", this->getNameByPtr(actor).c_str());
 
-		this->rootComponent = memory.readMemory<uintptr_t>(this->actor + Offsets::SWorld::SLevel::SActor::RootComponent);
-		if (!this->check(this->rootComponent, "RootComponent"))
+		uintptr_t rootComponent = memory.readMemory<uintptr_t>(actor + Offsets::SWorld::SLevel::SActor::RootComponent);
+		if (!this->check(rootComponent, "RootComponent"))
 			continue;
 
-		this->relativeLocation = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
-		if (!this->check(this->relativeLocation, "RelativeLocation"))
+		FVector relativeLocation = memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
+		if (!this->check(relativeLocation, "RelativeLocation"))
 			continue;
-		this->relativeRotation = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeRotation);
-		if (!this->check(this->relativeRotation, "RelativeRotation"))
+		FVector relativeRotation = memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeRotation);
+		if (!this->check(relativeRotation, "RelativeRotation"))
 			continue;
-		this->relativeScale3D = memory.readMemory<FVector>(this->rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeScale3D);
-		if (!this->check(this->relativeScale3D, "RelativeScale3D"))
+		FVector relativeScale3D = memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeScale3D);
+		if (!this->check(relativeScale3D, "RelativeScale3D"))
 			continue;
 	}
+
+	// Game Instance
+	uintptr_t gameInstance = memory.readMemory<uintptr_t>(world + Offsets::SWorld::OwningGameInstance);
+	if (!this->check(gameInstance, "GameInstance")) return false;
+
+	TArray localPlayers = memory.readMemory<TArray>(gameInstance + Offsets::SWorld::SGameInstance::LocalPlayers);
+	if (!this->check(localPlayers, "LocalPlayers")) return false;
+
+	uintptr_t localPlayer = memory.readMemory<uintptr_t>(localPlayers.data);
+	if (!this->check(localPlayer, "LocalPlayer")) return false;
+
+	uintptr_t playerController = memory.readMemory<uintptr_t>(localPlayer + Offsets::SWorld::SGameInstance::SLocalPlayers::PlayerController);
+	if (!this->check(playerController, "PlayerController")) return false;
+
+	uintptr_t cameraManager = memory.readMemory<uintptr_t>(playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::PlayerCameraManager);
+	if (!this->check(cameraManager, "CameraManager")) return false;
+
+	FMinimalViewInfo viewInfo = memory.readMemory<FMinimalViewInfo>(cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo);
+	if (!this->check(viewInfo, "ViewInfo")) return false;
 
 	return true;
 }
