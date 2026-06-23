@@ -52,8 +52,18 @@ namespace Offsets {
             static constexpr uintptr_t PlayerArray = 0x2C0;
 
             struct SPlayerArray {
-                // PlayerState = PlayerArray.data + i * sizeof(uintptr_t)
                 static constexpr uintptr_t Pawn = 0x320;
+
+                struct SPawn {
+                    static constexpr uintptr_t Mesh = 0x418;
+                };
+
+                struct SMesh {
+                    static constexpr uintptr_t Class = 0x10;
+                    static constexpr uintptr_t SkeletalMesh = 0x578;
+                    static constexpr uintptr_t BoneSpaceTransforms = 0x9A8;
+                    static constexpr uintptr_t ComponentSpaceTransforms = 0x9B8;
+                };
             };
         };
     };
