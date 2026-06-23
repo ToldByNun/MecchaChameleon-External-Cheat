@@ -12,6 +12,7 @@ namespace Offsets {
     struct SWorld {
         static constexpr uintptr_t PersistentLevel = 0x30;
         static constexpr uintptr_t OwningGameInstance = 0x228;
+        static constexpr uintptr_t GameState = 0x1B0;
 
         struct SLevel {
             static constexpr uintptr_t Actors = 0xA0;
@@ -44,6 +45,15 @@ namespace Offsets {
                         static constexpr uintptr_t CameraPOV = 0x10;
                     };
                 };
+            };
+        };
+
+        struct SGameState {
+            static constexpr uintptr_t PlayerArray = 0x2C0;
+
+            struct SPlayerArray {
+                // PlayerState = PlayerArray.data + i * sizeof(uintptr_t)
+                static constexpr uintptr_t Pawn = 0x320;
             };
         };
     };

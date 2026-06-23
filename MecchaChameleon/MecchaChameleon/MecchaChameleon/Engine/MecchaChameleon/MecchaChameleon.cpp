@@ -132,6 +132,7 @@ bool MecchaChameleon::update() {
 		return false;
 	}
 
+	// persistentLevel
 	uintptr_t persistentLevel = memory.readMemory<uintptr_t>(world + Offsets::SWorld::PersistentLevel);
 	if (!persistentLevel) {
 		logFail("PersistentLevel is 0");
@@ -155,18 +156,13 @@ bool MecchaChameleon::update() {
 			actorName.find("cLeon_Character") == std::string::npos)
 			continue;
 
-		uintptr_t mesh = memory.readMemory<uintptr_t>(
-			actor + 0x418 // mesh offset
-		);
+		uintptr_t mesh = memory.readMemory<uintptr_t>(actor + 0x428);
 
 		if (!mesh)
 			continue;
+
+		
 		// Mesh: Mesh | 0x1E7FED260A0
-
-		uintptr_t skeletalMesh = memory.readMemory<uintptr_t>(mesh + 0x578); // skeletalmesh offset
-
-		TArray bones = memory.readMemory<TArray>(mesh + 0x9A8); // cachedskeletalbone offset or wtv its called
-
 		// Unfinished, used for skeleton esp
 		/*for (uintptr_t off = 0x800; off < 0x1200; off += 0x8) {
 			TArray arr = memory.readMemory<TArray>(mesh + off);
@@ -209,6 +205,7 @@ bool MecchaChameleon::update() {
 		newActors.push_back({ location });
 	}
 
+	// gameInstance
 	uintptr_t gameInstance = memory.readMemory<uintptr_t>(world + Offsets::SWorld::OwningGameInstance);
 	if (!gameInstance) {
 		logFail("OwningGameInstance is 0");
@@ -246,6 +243,43 @@ bool MecchaChameleon::update() {
 	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(
 		cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo
 	);
+
+	// Game State
+	uintptr_t gameState = memory.readMemory<uintptr_t>(world + Offsets::SWorld::GameState);
+	if (!this->check(gameState, "GameSate")) return false;
+
+	TArray playerArray = memory.readMemory<TArray>(gameState + Offsets::SWorld::SGameState::PlayerArray);
+	if (!this->check(playerArray, "PlayerArray")) return false;
+	printf("PlayerArray: data=0x%llX count=%d max=%d\n",
+		playerArray.data,
+		playerArray.count,
+		playerArray.max
+	);
+
+	for (int i = 0; i < playerArray.count; i++) {
+		uintptr_t playerState = memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
+		if (!this->check(playerState, "PlayerState")) return false;
+
+		uintptr_t pawn = memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
+		if (!this->check(pawn, "Pawn")) return false;
+
+		printf("%s\n", getNameByPtr(pawn).c_str());
+
+		uintptr_t mesh = memory.readMemory<uintptr_t>(pawn + 0x418);
+
+		uintptr_t skeletalMesh = memory.readMemory<uintptr_t>(mesh + 0x578);
+
+		TArray boneSpace = memory.readMemory<TArray>(mesh + 0x9A8);
+		TArray componentSpace = memory.readMemory<TArray>(mesh + 0x9B8);
+
+		printf("mesh=%s class=%s skeletal=%s bones=%d comp=%d\n",
+			getNameByPtr(mesh).c_str(),
+			getNameByPtr(memory.readMemory<uintptr_t>(mesh + 0x10)).c_str(),
+			getNameByPtr(skeletalMesh).c_str(),
+			boneSpace.count,
+			componentSpace.count
+		);
+	}
 
 	{
 		std::lock_guard<std::mutex> lock(dataMutex);
