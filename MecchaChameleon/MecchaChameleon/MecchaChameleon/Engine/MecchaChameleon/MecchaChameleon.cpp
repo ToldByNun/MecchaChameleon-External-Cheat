@@ -123,24 +123,24 @@ bool MecchaChameleon::update() {
 		if (now - last < std::chrono::seconds(2))
 			return;
 		last = now;
-		std::cout << "[update] fehlgeschlagen: " << reason << "\n";
+		std::cout << "[update] error: " << reason << "\n";
 	};
 
 	uintptr_t world = memory.readMemory<uintptr_t>(memory.baseAddress + Offsets::GWorld);
 	if (!world) {
-		logFail("GWorld ist 0");
+		logFail("GWorld is 0");
 		return false;
 	}
 
 	uintptr_t persistentLevel = memory.readMemory<uintptr_t>(world + Offsets::SWorld::PersistentLevel);
 	if (!persistentLevel) {
-		logFail("PersistentLevel ist 0");
+		logFail("PersistentLevel is 0");
 		return false;
 	}
 
 	TArray actorArray = memory.readMemory<TArray>(persistentLevel + Offsets::SWorld::SLevel::Actors);
 	if (!actorArray.data || actorArray.count <= 0 || actorArray.count > 1000000) {
-		logFail("Actor-Array ungueltig oder leer");
+		logFail("Actor array empty");
 		return false;
 	}
 
@@ -149,6 +149,52 @@ bool MecchaChameleon::update() {
 	for (int i = 0; i < actorArray.count; i++) {
 		uintptr_t actor = memory.readMemory<uintptr_t>(actorArray.data + i * sizeof(uintptr_t));
 		if (!actor) continue;
+
+		std::string actorName = this->getNameByPtr(actor);
+		if (actorName.find("BP_FirstPersonCharacter") == std::string::npos &&
+			actorName.find("cLeon_Character") == std::string::npos)
+			continue;
+
+		uintptr_t mesh = memory.readMemory<uintptr_t>(
+			actor + 0x418 // mesh offset
+		);
+
+		if (!mesh)
+			continue;
+		// Mesh: Mesh | 0x1E7FED260A0
+
+		uintptr_t skeletalMesh = memory.readMemory<uintptr_t>(mesh + 0x578); // skeletalmesh offset
+
+		TArray bones = memory.readMemory<TArray>(mesh + 0x9A8); // cachedskeletalbone offset or wtv its called
+
+		// Unfinished, used for skeleton esp
+		/*for (uintptr_t off = 0x800; off < 0x1200; off += 0x8) {
+			TArray arr = memory.readMemory<TArray>(mesh + off);
+
+			if (!arr.data || arr.count <= 0 || arr.count > 512 || arr.max < arr.count)
+				continue;
+
+			FTransform t = memory.readMemory<FTransform>(arr.data);
+
+			printf("candidate 0x%llX count=%d max=%d data=0x%llX trans=%.1f %.1f %.1f scale=%.1f %.1f %.1f\n",
+				off, arr.count, arr.max, arr.data,
+				t.Translation.x, t.Translation.y, t.Translation.z,
+				t.Scale3D.x, t.Scale3D.y, t.Scale3D.z);
+		}
+
+		printf("bones: data=0x%llX count=%d max=%d\n", bones.data, bones.count, bones.max);
+
+		FTransform bone0 = memory.readMemory<FTransform>(bones.data + 0 * 0x60);
+		printf("bone0 trans: %.2f %.2f %.2f\n",
+			bone0.Translation.x,
+			bone0.Translation.y,
+			bone0.Translation.z
+		);
+
+		printf("Mesh: %s | 0x%llX\n", getNameByPtr(mesh).c_str(), mesh);
+		printf("SkeletalMesh: %s | 0x%llX\n", getNameByPtr(skeletalMesh).c_str(), skeletalMesh);
+		*/
+
 
 		uintptr_t rootComponent = memory.readMemory<uintptr_t>(actor + Offsets::SWorld::SLevel::SActor::RootComponent);
 		if (!rootComponent) continue;
@@ -165,19 +211,19 @@ bool MecchaChameleon::update() {
 
 	uintptr_t gameInstance = memory.readMemory<uintptr_t>(world + Offsets::SWorld::OwningGameInstance);
 	if (!gameInstance) {
-		logFail("OwningGameInstance ist 0");
+		logFail("OwningGameInstance is 0");
 		return false;
 	}
 
 	TArray localPlayers = memory.readMemory<TArray>(gameInstance + Offsets::SWorld::SGameInstance::LocalPlayers);
 	if (!localPlayers.data || localPlayers.count <= 0) {
-		logFail("LocalPlayers leer");
+		logFail("LocalPlayers empty");
 		return false;
 	}
 
 	uintptr_t localPlayer = memory.readMemory<uintptr_t>(localPlayers.data);
 	if (!localPlayer) {
-		logFail("LocalPlayer ist 0");
+		logFail("LocalPlayer is 0");
 		return false;
 	}
 
@@ -185,7 +231,7 @@ bool MecchaChameleon::update() {
 		localPlayer + Offsets::SWorld::SGameInstance::SLocalPlayers::PlayerController
 	);
 	if (!playerController) {
-		logFail("PlayerController ist 0");
+		logFail("PlayerController is 0");
 		return false;
 	}
 
@@ -193,7 +239,7 @@ bool MecchaChameleon::update() {
 		playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::PlayerCameraManager
 	);
 	if (!cameraManager) {
-		logFail("PlayerCameraManager ist 0");
+		logFail("PlayerCameraManager is 0");
 		return false;
 	}
 

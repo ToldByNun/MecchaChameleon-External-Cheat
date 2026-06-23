@@ -6,8 +6,8 @@
 #include <vector>
 
 namespace Offsets {
-    const uintptr_t GWorld = 0xA0B21F0;
-    const uintptr_t GNames = 0x9E40280;
+    const uintptr_t GWorld = 0x0; // outdated
+    const uintptr_t GNames = 0x0; // outdated
 
     struct SWorld {
         static constexpr uintptr_t PersistentLevel = 0x30;
