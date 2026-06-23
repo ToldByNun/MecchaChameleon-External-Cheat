@@ -27,6 +27,10 @@ public:
 		return buffer;
 	}
 
+	bool readRawMemory(uintptr_t address, void* buffer, size_t size) {
+		return ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer, size, nullptr);
+	}
+
 };
 
 #endif MEMORY_HPP

@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="MecchaChameleon/MecchaChameleon.vcxproj" />
+  <Project Path="MecchaChameleon/MecchaChameleon.vcxproj" Id="88852e93-474b-4f00-87d7-e84563dabe25" />
 </Solution>

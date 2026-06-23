@@ -146,6 +146,7 @@
     <ClCompile Include="MecchaChameleon\Engine\Memory\Memory.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MecchaChameleon\Engine\helpers.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\MecchaChameleon\MecchaChameleon.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\Memory\Memory.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\offsets.hpp" />

@@ -45,6 +45,8 @@ bool MecchaChameleon::resolveChain() {
 		this->className = memory.readMemory<FName>(this->actorClass + Offsets::SWorld::SLevel::SActor::Name);
 		if (!this->check(this->className, "ClassName"))
 			continue;
+
+		printf("Name: %s\n", this->getNameByPtr(this->actor).c_str());
 	}
 
 	return true;

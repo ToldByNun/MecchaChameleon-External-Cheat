@@ -3,6 +3,7 @@
 
 #include "../Memory/Memory.hpp"
 #include "../types.hpp"
+#include "../helpers.hpp"
 #include <string>
 #include <iomanip>
 #include <iostream>
@@ -14,6 +15,8 @@ public:
 
 public:
     Memory memory;
+    Helpers helpers;
+
     uintptr_t world = 0;
     uintptr_t persistentLevel = 0;
 
@@ -23,6 +26,16 @@ public:
     FName     className = {};
 
 private:
+    std::string resolveName(uint32_t index) {
+        return helpers.resolveName(memory, memory.baseAddress, index);
+    }
+
+    std::string getNameByPtr(uintptr_t actorPtr) {
+        int32_t fnameID = memory.readMemory<int32_t>(actorPtr + Offsets::SWorld::SLevel::SActor::Name);
+
+        return resolveName(fnameID);
+    }
+
 	bool resolveChain();
 
     // Boilerplate reused from old project
