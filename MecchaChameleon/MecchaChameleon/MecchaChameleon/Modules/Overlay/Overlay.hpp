@@ -1,6 +1,7 @@
 #ifndef OVERLAY_HPP
 #define OVERLAY_HPP
 
+#include "../Menu/Menu.hpp"
 #include <Windows.h>
 #include <d3d11.h>
 
@@ -20,8 +21,10 @@ public:
 	bool isRunning() const { return running; }
 
 private:
-	bool createOverlayWindow();
-	bool createDeviceD3D();
+	Menu menu;
+
+	bool createOverlayWindow(int x, int y, int w, int h);
+	bool createDeviceD3D(int width, int height);
 	void cleanupDeviceD3D();
 	void createRenderTarget();
 	void cleanupRenderTarget();

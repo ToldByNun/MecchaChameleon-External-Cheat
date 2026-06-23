@@ -11,7 +11,7 @@ namespace Offsets {
 
     struct SWorld {
         static constexpr uintptr_t PersistentLevel = 0x30;
-        static constexpr uintptr_t OwningGameInstance = 0x1B8;
+        static constexpr uintptr_t OwningGameInstance = 0x228;
 
         struct SLevel {
             static constexpr uintptr_t Actors = 0xA0;

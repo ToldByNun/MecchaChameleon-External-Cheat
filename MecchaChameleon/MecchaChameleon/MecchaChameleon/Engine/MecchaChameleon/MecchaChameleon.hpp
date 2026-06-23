@@ -5,19 +5,39 @@
 #include "../types.hpp"
 #include "../helpers.hpp"
 #include <string>
+#include <vector>
+#include <mutex>
+#include <atomic>
+#include <thread>
 #include <iomanip>
 #include <iostream>
 
+struct TrackedActor {
+    FVector location;
+};
+
 class MecchaChameleon {
 public:
+	~MecchaChameleon();
+
 	bool init();
 	bool update();
+	void getSnapshot(std::vector<TrackedActor>& outActors, FMinimalViewInfo& outViewInfo);
+	void startBackgroundUpdate();
+	void stopBackgroundUpdate();
 
 public:
     Memory memory;
     Helpers helpers;
 
 private:
+    std::vector<TrackedActor> actors;
+    FMinimalViewInfo viewInfo{};
+    std::mutex dataMutex;
+    std::atomic<bool> backgroundRunning{ false };
+    std::thread updateThread;
+
+    void updateLoop();
     std::string resolveName(uint32_t index) {
         return helpers.resolveName(memory, memory.baseAddress, index);
     }

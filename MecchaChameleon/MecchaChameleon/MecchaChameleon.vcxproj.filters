@@ -45,6 +45,9 @@
     <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_widgets.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="MecchaChameleon\Modules\ESP\ESP.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
     <ClCompile Include="MecchaChameleon\Modules\Menu\Menu.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
@@ -93,6 +96,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="MecchaChameleon\Engine\ImGui\imstb_truetype.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MecchaChameleon\Modules\ESP\ESP.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="MecchaChameleon\Modules\Menu\Menu.hpp">

@@ -6,7 +6,7 @@
 
 class Unreal {
 public:
-	bool WorldToScreen(const FMinimalViewInfo& viewInfo, FVector worldLocation, FVector2D& screenPos);
+	bool WorldToScreen(const FMinimalViewInfo& viewInfo, FVector worldLocation, FVector2D& screenPos, float screenWidth, float screenHeight);
 };
 
 #endif // UNREAL_HPP

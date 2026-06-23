@@ -1,5 +1,4 @@
 #include "Overlay.hpp"
-#include "../Menu/Menu.hpp"
 
 #include "../../Engine/ImGui/imgui.h"
 #include "../../Engine/ImGui/imgui_impl_win32.h"
@@ -26,10 +25,26 @@ bool Overlay::init(HWND targetWindow) {
 	targetHwnd = targetWindow;
 	g_overlay = this;
 
-	if (!createOverlayWindow())
+	RECT rect{};
+	if (!GetWindowRect(targetHwnd, &rect))
 		return false;
 
-	if (!createDeviceD3D()) {
+	width = rect.right - rect.left;
+	height = rect.bottom - rect.top;
+	if (width <= 0 || height <= 0)
+		return false;
+
+	lastX = rect.left;
+	lastY = rect.top;
+	lastWidth = -1;
+	lastHeight = -1;
+
+	ImGui_ImplWin32_EnableDpiAwareness();
+
+	if (!createOverlayWindow(rect.left, rect.top, width, height))
+		return false;
+
+	if (!createDeviceD3D(width, height)) {
 		shutdown();
 		return false;
 	}
@@ -49,8 +64,9 @@ bool Overlay::init(HWND targetWindow) {
 
 	ImGui_ImplWin32_Init(overlayHwnd);
 	ImGui_ImplDX11_Init(device, context);
+	ImGui_ImplWin32_EnableAlphaCompositing(overlayHwnd);
 
-	setClickThrough(!Menu::isOpen());
+	setClickThrough(!settings::menuOpen);
 	syncPosition();
 
 	return true;
@@ -72,22 +88,21 @@ void Overlay::shutdown() {
 	g_overlay = nullptr;
 }
 
-bool Overlay::createOverlayWindow() {
+bool Overlay::createOverlayWindow(int x, int y, int w, int h) {
 	windowClass.cbSize = sizeof(WNDCLASSEXW);
 	windowClass.style = CS_HREDRAW | CS_VREDRAW;
 	windowClass.lpfnWndProc = wndProc;
 	windowClass.hInstance = GetModuleHandleW(nullptr);
 	windowClass.lpszClassName = kWindowClassName;
 
-	if (!RegisterClassExW(&windowClass))
-		return false;
+	RegisterClassExW(&windowClass);
 
 	overlayHwnd = CreateWindowExW(
 		WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT,
 		kWindowClassName,
 		L"MecchaOverlay",
 		WS_POPUP,
-		0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
+		x, y, w, h,
 		nullptr, nullptr, windowClass.hInstance, nullptr
 	);
 
@@ -101,13 +116,16 @@ bool Overlay::createOverlayWindow() {
 
 	ShowWindow(overlayHwnd, SW_SHOWDEFAULT);
 	UpdateWindow(overlayHwnd);
+	SetWindowPos(overlayHwnd, HWND_TOPMOST, x, y, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 	return true;
 }
 
-bool Overlay::createDeviceD3D() {
+bool Overlay::createDeviceD3D(int w, int h) {
 	DXGI_SWAP_CHAIN_DESC swapDesc = {};
 	swapDesc.BufferCount = 2;
+	swapDesc.BufferDesc.Width = static_cast<UINT>(w);
+	swapDesc.BufferDesc.Height = static_cast<UINT>(h);
 	swapDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapDesc.OutputWindow = overlayHwnd;
@@ -117,9 +135,10 @@ bool Overlay::createDeviceD3D() {
 
 	D3D_FEATURE_LEVEL featureLevel;
 	const D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
+	const UINT createFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 	if (FAILED(D3D11CreateDeviceAndSwapChain(
-		nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
+		nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createFlags,
 		featureLevels, 1, D3D11_SDK_VERSION,
 		&swapDesc, &swapChain, &device, &featureLevel, &context)))
 		return false;
@@ -178,12 +197,13 @@ void Overlay::syncPosition() {
 	const bool moved = rect.left != lastX || rect.top != lastY;
 	const bool resized = width != lastWidth || height != lastHeight;
 
-	if (moved || resized) {
-		SetWindowPos(
-			overlayHwnd, HWND_TOPMOST,
-			rect.left, rect.top, width, height,
-			SWP_NOACTIVATE | SWP_SHOWWINDOW
-		);
+	SetWindowPos(
+		overlayHwnd, HWND_TOPMOST,
+		rect.left, rect.top, width, height,
+		SWP_NOACTIVATE | SWP_SHOWWINDOW
+	);
+
+	if (moved) {
 		lastX = rect.left;
 		lastY = rect.top;
 	}

@@ -15,9 +15,9 @@
 
 External cheat for **MecchaChameleon** (UE5) — built for **memory research and reverse engineering**.
 
-The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable and walks core Unreal structures (`GWorld`, actor lists, `GNames`, component transforms) to understand how runtime state is laid out in memory.
+The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable and walks core Unreal structures (`GWorld`, actor lists, `GNames`, component transforms, camera POV) to understand how runtime state is laid out in memory. A transparent DXGI overlay (DirectX 11 + ImGui) renders on top of the game window.
 
-> Work in progress. Foundation layer is in place; gameplay-facing features are planned below.
+> Work in progress. Memory chain, background polling, overlay, and menu are in place. ESP features are partially wired; aimbot remains placeholder UI only.
 
 <br/>
 
@@ -29,6 +29,7 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 - [Project layout](#project-layout)
 - [Requirements](#requirements)
 - [Build & run](#build--run)
+- [Controls](#controls)
 - [Offsets](#offsets)
 - [Roadmap](#roadmap)
 - [Disclaimer](#disclaimer)
@@ -43,8 +44,15 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **World chain** | Resolve `GWorld → PersistentLevel → Actors` | done |
 | **FName pool** | Decode entries from `GNames` | done |
 | **Actor walk** | Read class names, `RootComponent`, transforms | done |
-| **Projection** | `WorldToScreen` math (`FMinimalViewInfo → FVector2D`) | WIP |
-| **View info** | Read camera / `FMinimalViewInfo` from live process | planned |
+| **Camera chain** | `GameInstance → LocalPlayer → PlayerController → CameraManager` | done |
+| **View info** | Live `FMinimalViewInfo` from `PlayerCameraManager` | done |
+| **Projection** | `WorldToScreen` (`FMinimalViewInfo → FVector2D`) | done |
+| **Background poll** | Mutex-protected actor/camera snapshot on a worker thread | done |
+| **Overlay** | Transparent Win32 window, DXGI 11, ImGui render loop | done |
+| **Menu** | ImGui tabs (ESP / Aimbot / Misc), `INSERT` toggle | done |
+| **Snaplines ESP** | Lines from screen bottom to projected actor positions | WIP |
+| **Box / skeleton / labels** | Menu toggles present, rendering not implemented | planned |
+| **Aimbot** | Menu toggles present, no aim logic yet | planned |
 
 ---
 
@@ -79,29 +87,37 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 
 ```mermaid
 flowchart LR
-    A["main.cpp"] --> B["Core engine"]
+    A["main.cpp"] --> B["MecchaChameleon core"]
+    A --> O["Overlay"]
+    A --> M["Menu"]
+    A --> E["ESP"]
+
     B --> C["Memory"]
     B --> D["Helpers"]
-    B --> E["Unreal"]
+    B --> U["Unreal"]
 
-    C -->|"attachToProcess()"| F["MecchaChameleon<br/>shipping process"]
+    C -->|"attachToProcess()"| F["PenguinHotel-Win64-Shipping.exe"]
     C -->|"readMemory&lt;T&gt;()"| F
 
-    B --> G["GWorld"]
+    B -->|"background thread"| G["GWorld"]
     G --> H["PersistentLevel"]
     H --> I["Actors TArray"]
-    I --> J["Actor → UClass → FName"]
-    I --> K["RootComponent → FVector"]
+    I --> J["RootComponent → FVector"]
 
-    D --> L["GNames"]
-    E --> M["WorldToScreen"]
+    G --> K["GameInstance → CameraManager"]
+    K --> L["FMinimalViewInfo"]
+
+    B -->|"getSnapshot()"| A
+    U -->|"WorldToScreen()"| E
+    O -->|"DX11 + ImGui"| N["Transparent overlay HWND"]
+    M --> S["settings::esp / aimbot"]
 
     style A fill:#161b22,color:#e6edf3,stroke:#30363d
     style B fill:#21262d,color:#e6edf3,stroke:#30363d
     style F fill:#0d1117,color:#8b949e,stroke:#30363d
 ```
 
-**Pointer chain resolved at init:**
+**Pointer chains resolved at init / update:**
 
 ```
 BaseAddress + GWorld
@@ -113,7 +129,16 @@ BaseAddress + GWorld
                                     ├── RelativeLocation
                                     ├── RelativeRotation
                                     └── RelativeScale3D
+
+BaseAddress + GWorld
+    └── UWorld::OwningGameInstance
+            └── LocalPlayers (TArray)
+                    └── ULocalPlayer::PlayerController
+                            └── APlayerCameraManager
+                                    └── FMinimalViewInfo (CameraInfo)
 ```
+
+**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → optional ESP draw → present. Settings live in `settings` (`Menu.hpp` / `Menu.cpp`) as a single shared instance (`extern` in header, definition in `Menu.cpp`).
 
 ---
 
@@ -121,18 +146,24 @@ BaseAddress + GWorld
 
 ```
 MecchaChameleon/                          # repo / solution root
+├── README.md
 ├── MecchaChameleon.slnx
 └── MecchaChameleon/
     ├── MecchaChameleon.vcxproj
     └── MecchaChameleon/
         ├── main.cpp
-        └── Engine/
-            ├── offsets.hpp
-            ├── types.hpp
-            ├── helpers.hpp
-            ├── Memory/
-            ├── MecchaChameleon/          # core module (internal name)
-            └── Unreal/
+        ├── Engine/
+        │   ├── offsets.hpp
+        │   ├── types.hpp
+        │   ├── helpers.hpp
+        │   ├── Memory/
+        │   ├── MecchaChameleon/          # core module (attach, update, snapshot)
+        │   ├── Unreal/                   # WorldToScreen
+        │   └── ImGui/                    # vendored Dear ImGui + DX11/Win32 backends
+        └── Modules/
+            ├── Overlay/                  # transparent DXGI overlay window
+            ├── Menu/                     # ImGui menu + shared settings
+            └── Esp/                      # ESP draw helpers
 ```
 
 ---
@@ -144,7 +175,7 @@ MecchaChameleon/                          # repo / solution root
 | OS | Windows 10 / 11 (x64) |
 | IDE | Visual Studio 2026, MSVC v145 |
 | Language | C++20 |
-| Target | MecchaChameleon UE5 shipping build |
+| Target | MecchaChameleon UE5 shipping build (`PenguinHotel-Win64-Shipping.exe`) |
 
 ---
 
@@ -157,18 +188,28 @@ cd MecchaChameleon-External-Cheat
 
 Open `MecchaChameleon/MecchaChameleon.slnx`, set **Release · x64**, then build.
 
-MecchaChameleon must be running before launch. Init blocks until the `GWorld` chain resolves.
+The game must be running before launch. The tool attaches to `PenguinHotel-Win64-Shipping.exe` and opens a click-through overlay aligned to the game window.
 
-**Expected console output:**
+**Expected console output (init):**
 
 ```text
 [+] BaseAddress                    : 0x7FF6A0000000
 [+] GWorld                         : 0x7FF6A0B21F0
 [+] PersistentLevel                : 0x...
 [+] Actors                         : SUCCESS [Count: 142] at 0x...
-Name: BP_PlayerCharacter_C
-[+] RelativeLocation               : SUCCESS X: 1200 Y: 340 Z: 90
+[+] Overlay running. Press INSERT to toggle menu.
+[update] ok | level actors=142 | tracked=38 | cam=(1200, 340, 90) fov=90
 ```
+
+---
+
+## Controls
+
+| Key | Action |
+|:----|:-------|
+| **INSERT** | Toggle ImGui menu (overlay becomes interactive while open) |
+
+Menu tabs: **ESP** (box, skeleton, name/distance, snaplines), **Aimbot** (enabled, FOV, smoothing — UI only), **Misc**.
 
 ---
 
@@ -181,9 +222,14 @@ Defined in `offsets.hpp`. Version-specific to the current MecchaChameleon build 
 | `GWorld` | `0xA0B21F0` | Global world pointer |
 | `GNames` | `0x9E40280` | FName string pool |
 | `PersistentLevel` | `+0x30` | `UWorld` → active level |
+| `OwningGameInstance` | `+0x228` | `UWorld` → game instance |
 | `Actors` | `+0xA0` | Level actor array |
 | `RootComponent` | `+0x1B8` | Actor scene root |
 | `RelativeLocation` | `+0x140` | Component translation |
+| `LocalPlayers` | `+0x38` | `UGameInstance` → local player array |
+| `PlayerController` | `+0x30` | `ULocalPlayer` → controller |
+| `PlayerCameraManager` | `+0x360` | `APlayerController` → camera manager |
+| `CameraInfo` | `+0x1540` | `FMinimalViewInfo` in camera manager |
 
 ---
 
@@ -196,15 +242,17 @@ Defined in `offsets.hpp`. Version-specific to the current MecchaChameleon build 
 - [x] `GNames` / FName decoding
 - [x] Root-component transform reads
 - [x] World-to-screen projection math
-- [ ] Live `FMinimalViewInfo` extraction
-- [ ] Overlay render loop (DirectX / ImGui)
+- [x] Live `FMinimalViewInfo` extraction
+- [x] Background update thread + thread-safe snapshot
+- [x] Overlay render loop (DirectX 11 / ImGui)
+- [x] ImGui menu & shared settings
 
 **ESP**
 
 - [ ] Box ESP
 - [ ] Skeleton ESP
 - [ ] Name / distance labels
-- [ ] Snaplines
+- [x] Snaplines (first pass — toggle in menu)
 - [ ] Chinese hat
 
 **Aimbot** *(TBD)*
