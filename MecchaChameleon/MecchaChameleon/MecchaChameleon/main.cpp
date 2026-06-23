@@ -54,13 +54,6 @@ int main() {
 			if (!actors.empty())
 				esp.renderSnaplines(actors, viewInfo);
 		}
-		else {
-			const auto now = std::chrono::steady_clock::now();
-			if (now - lastEspLog >= std::chrono::seconds(2)) {
-				lastEspLog = now;
-				std::cout << "[main] Snaplines aus — im Menu aktivieren\n";
-			}
-		}
 
 		overlay.endFrame();
 
