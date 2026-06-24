@@ -185,6 +185,11 @@ bool MecchaChameleon::refresh() {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
 		if (!playerState) continue;
 
+		//this->dumpObjectRefsDeep(playerState, 0x1000, 1, 0, 64);
+		//this->dumpFStrings(playerState, 0x1000);
+
+		std::string playerName = this->memory.readFString(playerState + 0x340); // 0x340 = playerName
+
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
 		if (!pawn) continue;
 
@@ -208,6 +213,7 @@ bool MecchaChameleon::refresh() {
 		  MoverStateMachine class=MovementModeStateMachine [0x1E5D6308170]
 		  +0x990 -> 0x1E67403A380 MoverBlackboard class=MoverBlackboard
 		  MoverBlackboard class=MoverBlackboard [0x1E67403A380]*/
+
 		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + 0x400);
 		if (!this->check(headPosition, "HeadPosition")) continue;
 
@@ -229,7 +235,7 @@ bool MecchaChameleon::refresh() {
 
 		if (location.x == 0 && location.y == 0 && location.z == 0) continue;
 
-		newActors.push_back({ location, headRadius, playerSize });
+		newActors.push_back({ location, headRadius, playerSize, playerName });
 	}
 
 	std::lock_guard<std::mutex> lock(this->dataMutex);

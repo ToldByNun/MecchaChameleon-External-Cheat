@@ -31,7 +31,7 @@ void Menu::render() {
 		if (ImGui::BeginTabItem("ESP")) {
 			ImGui::Checkbox("Box ESP", &globals.settings.esp.box);
 			ImGui::Checkbox("Skeleton ESP", &globals.settings.esp.skeleton);
-			ImGui::Checkbox("Name / Distance", &globals.settings.esp.nameDistance);
+			ImGui::Checkbox("Name / Distance", &globals.settings.esp.name);
 			ImGui::Checkbox("Snaplines", &globals.settings.esp.snaplines);
 			ImGui::EndTabItem();
 		}

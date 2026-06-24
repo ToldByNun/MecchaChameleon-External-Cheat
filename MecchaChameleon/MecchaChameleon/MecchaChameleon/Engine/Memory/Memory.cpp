@@ -114,6 +114,41 @@ bool Memory::detachFromProcess() {
 	return false;
 }
 
+std::string Memory::readFString(uintptr_t address) {
+	FString str = readMemory<FString>(address);
+
+	if (!str.data || str.count <= 0 || str.count > 128 || str.max < str.count)
+		return "";
+
+	std::wstring wide;
+	wide.resize(str.count);
+
+	if (!ReadProcessMemory(
+		processHandle,
+		reinterpret_cast<LPCVOID>(str.data),
+		wide.data(),
+		str.count * sizeof(wchar_t),
+		nullptr
+	)) {
+		return "";
+	}
+
+	if (!wide.empty() && wide.back() == L'\0')
+		wide.pop_back();
+
+	std::string out;
+	out.reserve(wide.size());
+
+	for (wchar_t c : wide) {
+		if (c >= 0 && c <= 127)
+			out.push_back(static_cast<char>(c));
+		else
+			out.push_back('?');
+	}
+
+	return out;
+}
+
 std::vector<PatternByte> Memory::parsePattern(const std::string& pattern) {
 	std::vector<PatternByte> bytes;
 	std::istringstream stream(pattern);

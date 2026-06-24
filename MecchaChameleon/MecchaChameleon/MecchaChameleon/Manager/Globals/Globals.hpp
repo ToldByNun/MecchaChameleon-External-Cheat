@@ -9,7 +9,8 @@ class ESP;
 struct EspSettings {
     bool box = false;
     bool skeleton = false;
-    bool nameDistance = false;
+    bool name = false;
+    bool distance = false;
     bool snaplines = false;
     bool chineseHat = false;
 };

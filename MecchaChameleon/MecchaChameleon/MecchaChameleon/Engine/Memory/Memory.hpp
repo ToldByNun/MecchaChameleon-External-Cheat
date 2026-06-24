@@ -1,6 +1,7 @@
 #ifndef MEMORY_HPP
 #define MEMORY_HPP
 
+#include "../types.hpp"
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <cstdint>
@@ -51,6 +52,8 @@ public:
 	bool readRawMemory(uintptr_t address, void* buffer, size_t size) {
 		return ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer, size, nullptr);
 	}
+
+	std::string readFString(uintptr_t address);
 
 	std::vector<PatternByte> parsePattern(const std::string& pattern);
 	uintptr_t findAob(uintptr_t start, size_t size, const std::string& pattern);

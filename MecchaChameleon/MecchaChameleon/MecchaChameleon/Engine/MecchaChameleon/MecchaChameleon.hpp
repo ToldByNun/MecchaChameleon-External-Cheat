@@ -21,6 +21,7 @@ struct TrackedActor {
     FVector location;
     double headRadius;
     double playerSize;
+    std::string playerName;
 };
 
 class MecchaChameleon : public IManagedClass {
@@ -190,6 +191,41 @@ public:
             dumpObjectRefsDeep(ptr, scanSize, depth - 1, indent + 1, maxNameLength, skipNone, visitedPtr);
         }
     }
+
+    void dumpFStrings(uintptr_t object, size_t scanSize = 0x800) {
+        for (uintptr_t off = 0; off < scanSize; off += 0x8) {
+            uintptr_t data = memory.readMemory<uintptr_t>(object + off);
+            int32_t count = memory.readMemory<int32_t>(object + off + 0x8);
+            int32_t max = memory.readMemory<int32_t>(object + off + 0xC);
+
+            if (!data || count <= 0 || count > 64 || max < count || max > 128)
+                continue;
+
+            std::wstring value(count, L'\0');
+
+            if (!memory.readRawMemory(data, value.data(), count * sizeof(wchar_t)))
+                continue;
+
+            bool valid = true;
+            for (wchar_t c : value) {
+                if (c == L'\0')
+                    continue;
+
+                if (c < 32 || c > 126) {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (!valid)
+                continue;
+
+            std::wcout
+                << L"+0x" << std::hex << off << std::dec
+                << L" FString = " << value << L"\n";
+        }
+    }
+
 };
 
 #endif // MECCHACHAMELEON_HPP
