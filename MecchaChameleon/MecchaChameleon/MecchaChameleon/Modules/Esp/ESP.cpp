@@ -10,7 +10,10 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 		this->renderBox(actors, viewInfo);
 	
 	if (globals.settings.esp.name)
-		this->renderName(actors, viewInfo);
+		this->renderNameDistance(actors, viewInfo, LabelType::NAME);
+
+	if (globals.settings.esp.distance)
+		this->renderNameDistance(actors, viewInfo, LabelType::DISTANCE);
 
 	if (globals.settings.esp.snaplines)
 		this->renderSnaplines(actors, viewInfo);
@@ -25,6 +28,8 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	FVector2D screenBottom, screenTop;
 
 	for (const TrackedActor& actor : actors) {
+		if (actor.isLocalPlayer) continue;
+
 		bool bVisibleBottom = unreal.WorldToScreen(
 			viewInfo,
 			actor.location - FVector(0, 0, actor.playerSize),
@@ -73,12 +78,25 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	}
 }
 
-void ESP::renderName(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
+void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo, LabelType type) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	FVector2D screenTop;
 
+	bool hasLocalPlayer = false;
+	FVector localLocation{};
+
 	for (const TrackedActor& actor : actors) {
+		if (actor.isLocalPlayer) {
+			localLocation = actor.location;
+			hasLocalPlayer = true;
+			break;
+		}
+	}
+
+	for (const TrackedActor& actor : actors) {
+		if (actor.isLocalPlayer) continue;
+
 		bool bVisibleTop = unreal.WorldToScreen(
 			viewInfo,
 			actor.location + FVector(0, 0, actor.playerSize),
@@ -87,44 +105,58 @@ void ESP::renderName(const std::vector<TrackedActor>& actors, const FMinimalView
 			displaySize.y
 		);
 
-		if (!bVisibleTop)
-			continue;
+		if (!bVisibleTop) continue;
 
-		ImVec2 textSize = ImGui::CalcTextSize(actor.playerName.c_str());
+		std::string text;
 
-		ImVec2 textPos(
-			screenTop.x - (textSize.x * 0.5f),
-			screenTop.y - textSize.y - 4.0f
-		);
+		ImVec2 textSize = ImGui::CalcTextSize(text.c_str());
 
-		drawList->AddText(
-			ImVec2(textPos.x + 1.0f, textPos.y + 1.0f),
-			IM_COL32(0, 0, 0, 255),
-			actor.playerName.c_str()
-		);
+		ImVec2 textPos;
 
-		drawList->AddText(
-			ImVec2(textPos.x - 1.0f, textPos.y - 1.0f),
-			IM_COL32(0, 0, 0, 255),
-			actor.playerName.c_str()
-		);
+		if (type == LabelType::NAME) {
+			textPos = ImVec2(
+				screenTop.x - (textSize.x * 0.5f),
+				screenTop.y - textSize.y - 4.0f
+			);
 
-		drawList->AddText(
-			ImVec2(textPos.x - 1.0f, textPos.y + 1.0f),
-			IM_COL32(0, 0, 0, 255),
-			actor.playerName.c_str()
-		);
+			text = actor.playerName;
+		}
 
-		drawList->AddText(
-			ImVec2(textPos.x + 1.0f, textPos.y - 1.0f),
-			IM_COL32(0, 0, 0, 255),
-			actor.playerName.c_str()
-		);
+		if (type == LabelType::DISTANCE) {
+			textPos = ImVec2(
+				screenTop.x - (textSize.x * 0.5f),
+				screenTop.y + actor.playerSize * 0.35f
+			);
+
+			FVector localLocation = viewInfo.Location;
+
+			for (const TrackedActor& localActor : actors) {
+				if (localActor.isLocalPlayer) {
+					localLocation = localActor.location;
+					break;
+				}
+			}
+
+			double dx = actor.location.x - localLocation.x;
+			double dy = actor.location.y - localLocation.y;
+			double dz = actor.location.z - localLocation.z;
+
+			double distance = std::sqrt(dx * dx + dy * dy + dz * dz) / 100.0;
+
+			text = std::to_string(static_cast<int>(distance)) + "m";
+		}
+
+		if (text.empty()) continue;
+
+		drawList->AddText(ImVec2(textPos.x + 1.0f, textPos.y + 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
+		drawList->AddText(ImVec2(textPos.x - 1.0f, textPos.y - 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
+		drawList->AddText(ImVec2(textPos.x - 1.0f, textPos.y + 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
+		drawList->AddText(ImVec2(textPos.x + 1.0f, textPos.y - 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
 
 		drawList->AddText(
 			textPos,
 			IM_COL32(255, 255, 255, 255),
-			actor.playerName.c_str()
+			text.c_str()
 		);
 	}
 }
@@ -141,6 +173,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 	int linesDrawn = 0;
 
 	for (const TrackedActor& actor : actors) {
+		if (actor.isLocalPlayer) continue;
 		FVector2D screenPos;
 		if (!unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
 			behindCamera++;
@@ -172,6 +205,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 	constexpr float twoPi = 6.28318530718f;
 
 	for (const TrackedActor& actor : actors) {
+		if (actor.isLocalPlayer) continue;
 		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 1.3);
 		float hatRadius = 35.0f;
 		float hatHeight = 15.0f;
@@ -179,8 +213,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 		FVector tipWorld = baseCenter + FVector(0, 0, 15);
 
 		FVector2D screenTip;
-		if (!unreal.WorldToScreen(viewInfo, tipWorld, screenTip, displaySize.x, displaySize.y))
-			continue;
+		if (!unreal.WorldToScreen(viewInfo, tipWorld, screenTip, displaySize.x, displaySize.y)) continue;
 
 		drawList->AddCircleFilled(ImVec2(screenTip.x, screenTip.y), 4.0f, IM_COL32(255, 0, 0, 255));
 

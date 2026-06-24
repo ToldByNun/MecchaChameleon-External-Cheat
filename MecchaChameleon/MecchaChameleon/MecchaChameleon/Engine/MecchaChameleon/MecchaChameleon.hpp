@@ -22,6 +22,7 @@ struct TrackedActor {
     double headRadius;
     double playerSize;
     std::string playerName;
+    bool isLocalPlayer;
 };
 
 class MecchaChameleon : public IManagedClass {
