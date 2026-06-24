@@ -136,20 +136,6 @@ bool MecchaChameleon::validatePlayerArray() {
 		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + 0x400);
 		if (!this->check(headPosition, "HeadPosition")) continue;
 
-		this->dumpObjectRefsDeep(headPosition, 0x1000, 1, 0, 40);
-
-		for (uintptr_t off = 0x100; off < 0x300; off += 0x8) {
-			double x = memory.readMemory<double>(headPosition + off);
-			double y = memory.readMemory<double>(headPosition + off + 0x8);
-			double z = memory.readMemory<double>(headPosition + off + 0x10);
-
-			if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
-				std::abs(x) < 100000 && std::abs(y) < 100000 && std::abs(z) < 100000) {
-				std::cout << "+0x" << std::hex << off << std::dec
-					<< " vec3 = " << x << ", " << y << ", " << z << "\n";
-			}
-		}
-
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (!this->check(mesh, "Mesh")) continue;
 

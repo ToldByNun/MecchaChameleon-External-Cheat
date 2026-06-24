@@ -11,6 +11,9 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
+
+	if (globals.settings.esp.chineseHat)
+		this->renderChineseHat(actors, viewInfo);
 }
 
 void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -26,7 +29,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 
 	for (const TrackedActor& actor : actors) {
 		FVector2D screenPos;
-		if (!unreal.WorldToScreen(viewInfo, actor.location, screenPos, displaySize.x, displaySize.y)) {
+		if (!unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
 			behindCamera++;
 			continue;
 		}
@@ -98,5 +101,57 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			IM_COL32(0, 0, 0, 255),
 			0.0f, ImDrawFlags_None, 1.0f
 		);
+	}
+}
+
+// this is still very broken, so not integrated into the ui yet.
+void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+
+	constexpr int segments = 64;
+	constexpr float twoPi = 6.28318530718f;
+
+	for (const TrackedActor& actor : actors) {
+		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 1.3);
+		float hatRadius = 35.0f;
+		float hatHeight = 15.0f;
+
+		FVector tipWorld = baseCenter + FVector(0, 0, 15);
+
+		FVector2D screenTip;
+		if (!unreal.WorldToScreen(viewInfo, tipWorld, screenTip, displaySize.x, displaySize.y))
+			continue;
+
+		drawList->AddCircleFilled(ImVec2(screenTip.x, screenTip.y), 4.0f, IM_COL32(255, 0, 0, 255));
+
+		FVector2D lastScreenEdge{};
+		bool hasLastEdge = false;
+
+		for (int i = 0; i <= segments; i++) {
+			float angle = (static_cast<float>(i) / static_cast<float>(segments)) * twoPi;
+
+			FVector edgeWorld = baseCenter + FVector(
+				std::cos(angle) * hatRadius,
+				std::sin(angle) * hatRadius,
+				0
+			);
+
+			FVector2D screenEdge;
+			if (!unreal.WorldToScreen(viewInfo, edgeWorld, screenEdge, displaySize.x, displaySize.y)) {
+				hasLastEdge = false;
+				continue;
+			}
+
+			ImColor color = ImColor::HSV(static_cast<float>(i) / segments, 1.0f, 1.0f);
+
+			drawList->AddLine(ImVec2(screenTip.x, screenTip.y), ImVec2(screenEdge.x, screenEdge.y), color, 1.0f);
+
+			if (hasLastEdge)
+				drawList->AddLine(ImVec2(lastScreenEdge.x, lastScreenEdge.y), ImVec2(screenEdge.x, screenEdge.y), color, 1.5f);
+
+			lastScreenEdge = screenEdge;
+			hasLastEdge = true;
+		}
 	}
 }

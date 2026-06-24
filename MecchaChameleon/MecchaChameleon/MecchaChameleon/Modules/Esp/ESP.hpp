@@ -14,6 +14,7 @@ public:
 	void renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 	void renderSnaplines(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 	void renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
+	void renderChineseHat(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 
 };
 

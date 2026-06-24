@@ -11,6 +11,7 @@ struct EspSettings {
     bool skeleton = false;
     bool nameDistance = false;
     bool snaplines = false;
+    bool chineseHat = false;
 };
 
 struct AimbotSettings {
