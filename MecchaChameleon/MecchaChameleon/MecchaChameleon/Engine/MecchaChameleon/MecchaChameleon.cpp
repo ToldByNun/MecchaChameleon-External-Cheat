@@ -194,6 +194,10 @@ bool MecchaChameleon::refresh() {
 
 	uintptr_t localPawn = memory.readMemory<uintptr_t>(this->playerController + 0x2E8);
 
+	this->dumpObjectRefsDeep(localPawn, 0x1000, 1, 0, 50);
+
+	PlayerRole localRole = this->getRoleFromClass(localPawn);
+
 	if (!this->gameState || !this->cameraManager) return false;
 
 	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo);
@@ -211,6 +215,8 @@ bool MecchaChameleon::refresh() {
 
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
 		if (!pawn) continue;
+
+		PlayerRole playerRole = this->getRoleFromClass(pawn);
 
 		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::HeadPosition);
 		if (!headPosition) continue;
@@ -233,7 +239,16 @@ bool MecchaChameleon::refresh() {
 
 		if (location.x == 0 && location.y == 0 && location.z == 0) continue;
 
-		newActors.push_back({ location, headRadius, playerSize, playerName, pawn == localPawn });
+		newActors.push_back(
+			{ 
+				location,
+				headRadius,
+				playerSize,
+				playerName,
+				localRole == playerRole && playerRole != PlayerRole::UNKNOWN,
+				pawn == localPawn 
+			}
+		);
 	}
 
 	std::lock_guard<std::mutex> lock(this->dataMutex);

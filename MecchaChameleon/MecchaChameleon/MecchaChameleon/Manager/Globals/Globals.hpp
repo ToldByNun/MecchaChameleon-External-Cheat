@@ -13,6 +13,7 @@ struct EspSettings {
     bool distance = false;
     bool snaplines = false;
     bool chineseHat = false;
+    bool onlyEnemies = false;
 };
 
 struct AimbotSettings {

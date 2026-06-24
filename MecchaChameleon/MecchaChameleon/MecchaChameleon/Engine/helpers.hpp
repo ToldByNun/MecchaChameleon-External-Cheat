@@ -57,6 +57,7 @@ public:
 
         return std::string(buffer, length);
     }
+
 };
 
 #endif // HELPERS_HPP

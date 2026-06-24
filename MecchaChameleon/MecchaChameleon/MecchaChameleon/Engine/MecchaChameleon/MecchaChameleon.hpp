@@ -22,7 +22,15 @@ struct TrackedActor {
     double headRadius;
     double playerSize;
     std::string playerName;
+    bool sameTeam;
     bool isLocalPlayer;
+};
+
+enum PlayerRole {
+    HUNTER,
+    SURVIVOR,
+    SPECTATOR,
+    UNKNOWN
 };
 
 class MecchaChameleon : public IManagedClass {
@@ -39,6 +47,8 @@ public:
 public:
     Memory memory;
     Helpers helpers;
+
+    bool resolveChain();
 
 private:
     uintptr_t world = 0;
@@ -71,7 +81,6 @@ private:
         return resolveName(fnameID);
     }
 
-	bool resolveChain();
 	bool resolvePersistentLevel();
 	bool resolveGameInstance();
 	bool resolveLocalPlayer();
@@ -159,9 +168,9 @@ public:
 
         std::string pad(indent * 2, ' ');
 
-        std::string objName = getNameByPtr(object);
+        std::string objName = this->getNameByPtr(object);
         uintptr_t objClassPtr = memory.readMemory<uintptr_t>(object + 0x10);
-        std::string objClass = getNameByPtr(objClassPtr);
+        std::string objClass = this->getNameByPtr(objClassPtr);
 
         std::cout << pad << objName << " class=" << objClass
             << " [0x" << std::hex << object << std::dec << "]\n";
@@ -175,8 +184,8 @@ public:
                 continue;
 
             uintptr_t cls = memory.readMemory<uintptr_t>(ptr + 0x10);
-            std::string clsName = getNameByPtr(cls);
-            std::string name = getNameByPtr(ptr);
+            std::string clsName = this->getNameByPtr(cls);
+            std::string name = this->getNameByPtr(ptr);
 
             if (skipNone && (name.empty() || name == "None" || clsName.empty() || clsName == "None" || clsName == "TextureRenderTarget2D" || clsName == "Class" || clsName == "Texture2D" || clsName == "MaterialInstanceConstant" || clsName == "Function" || clsName == "Model" || clsName == "AnimBlueprintGeneratedClass" || clsName == "BlueprintGeneratedClass" || clsName == "NiagaraDataInterfaceVectorField" || clsName == "HorizontalBoxSlot"))
                 continue;
@@ -227,6 +236,21 @@ public:
                 << L"+0x" << std::hex << off << std::dec
                 << L" FString = " << value << L"\n";
         }
+    }
+
+    PlayerRole getRoleFromClass(uintptr_t object) {
+        std::string className = this->getNameByPtr(object);
+
+        if (className.find("Hunter") != std::string::npos)
+            return PlayerRole::HUNTER;
+
+        if (className.find("Survivor") != std::string::npos)
+            return PlayerRole::SURVIVOR;
+
+        if (className.find("Spectate") != std::string::npos)
+            return PlayerRole::SPECTATOR;
+
+        return PlayerRole::UNKNOWN;
     }
 
 };

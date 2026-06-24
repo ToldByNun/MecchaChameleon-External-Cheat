@@ -5,6 +5,14 @@
 #include <iostream>
 #include <chrono>
 
+bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
+	if (sameTeam && onlyEnemiesEnabled) return false;
+
+	if (isLocalPlayer) return false;
+
+	return true;
+}
+
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
@@ -28,7 +36,7 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	FVector2D screenBottom, screenTop;
 
 	for (const TrackedActor& actor : actors) {
-		if (actor.isLocalPlayer) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
 		bool bVisibleBottom = unreal.WorldToScreen(
 			viewInfo,
@@ -95,7 +103,7 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 	}
 
 	for (const TrackedActor& actor : actors) {
-		if (actor.isLocalPlayer) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
 		bool bVisibleTop = unreal.WorldToScreen(
 			viewInfo,
@@ -173,7 +181,8 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 	int linesDrawn = 0;
 
 	for (const TrackedActor& actor : actors) {
-		if (actor.isLocalPlayer) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+
 		FVector2D screenPos;
 		if (!unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
 			behindCamera++;
@@ -205,7 +214,8 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 	constexpr float twoPi = 6.28318530718f;
 
 	for (const TrackedActor& actor : actors) {
-		if (actor.isLocalPlayer) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+
 		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 1.3);
 		float hatRadius = 35.0f;
 		float hatHeight = 15.0f;
