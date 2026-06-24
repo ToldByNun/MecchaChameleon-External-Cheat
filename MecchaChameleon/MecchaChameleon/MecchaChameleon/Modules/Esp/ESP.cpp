@@ -70,10 +70,20 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			0.0f, ImDrawFlags_None, 1.0f
 		);
 
+		// very scuffed but to simplify it:
+		// if isTeammateColorEnabled true and if they are on the same team, then use box color
+		// if they arent on the same team enemyboxcolor
+		// and if isTeammateColorEnabled false, then use default (boxColor)
 		drawList->AddRect(
 			topLeft,
 			bottomRight,
-			IM_COL32(255, 255, 255, 255),
+			globals.settings.esp.isTeammateColorEnabled ? 
+			(
+				actor.sameTeam ? globals.settings.esp.boxColor : globals.settings.esp.enemyBoxColor
+			) : 
+			(
+				globals.settings.esp.boxColor
+			),
 			0.0f, ImDrawFlags_None, 2.0f
 		);
 

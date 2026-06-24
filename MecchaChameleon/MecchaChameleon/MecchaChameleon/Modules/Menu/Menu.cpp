@@ -35,6 +35,7 @@ void Menu::render() {
 			ImGui::Checkbox("Distance", &globals.settings.esp.distance);
 			ImGui::Checkbox("Snaplines", &globals.settings.esp.snaplines);
 			ImGui::Checkbox("Hide Teammates", &globals.settings.esp.onlyEnemies);
+			ImGui::Checkbox("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
 			ImGui::EndTabItem();
 		}
 
