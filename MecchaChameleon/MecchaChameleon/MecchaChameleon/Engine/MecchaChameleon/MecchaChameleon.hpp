@@ -58,6 +58,8 @@ private:
     bool chainResolved = false;
     void updateLoop();
 
+    bool devMode = false;
+
     std::string resolveName(uint32_t index) {
         return helpers.resolveName(memory, index);
     }

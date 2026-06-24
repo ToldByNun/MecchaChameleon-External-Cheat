@@ -61,9 +61,16 @@ namespace Offsets {
 
             struct SPlayerArray {
                 static constexpr uintptr_t Pawn = 0x320;
+                static constexpr uintptr_t PlayerName = 0x340;
 
                 struct SPawn {
                     static constexpr uintptr_t Mesh = 0x418;
+                    static constexpr uintptr_t HeadPosition = 0x400;
+
+                    struct SHeadPosition {
+                        static constexpr uintptr_t HeadRadius = 0x540;
+                        static constexpr uintptr_t PlayerSize = 0x130;
+                    };
                 };
 
                 struct SMesh {
