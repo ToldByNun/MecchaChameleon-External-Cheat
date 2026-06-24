@@ -3,6 +3,7 @@
 
 #include "../../Manager/Classmanager/Classmanager.hpp"
 #include "../Memory/Memory.hpp"
+#include "../ImGui/imgui.h"
 #include "../offsets.hpp"
 #include "../types.hpp"
 #include "../helpers.hpp"
@@ -14,10 +15,12 @@
 #include <thread>
 #include <iomanip>
 #include <iostream>
+#include <unordered_set>
 
 struct TrackedActor {
     FVector location;
-    double height;
+    double headRadius;
+    double playerSize;
 };
 
 class MecchaChameleon : public IManagedClass {
@@ -126,6 +129,66 @@ private:
 
         std::cout << "\033[0m" << std::endl;
         return true;
+    }
+
+public:
+    void dumpObjectRefsDeep(
+        uintptr_t object,
+        size_t scanSize = 0x800,
+        int depth = 1,
+        int indent = 0,
+        size_t maxNameLength = 64,
+        bool skipNone = true,
+        std::unordered_set<uintptr_t>* visitedPtr = nullptr
+    ) {
+        if (!object || depth < 0)
+            return;
+
+        std::unordered_set<uintptr_t> localVisited;
+        if (!visitedPtr)
+            visitedPtr = &localVisited;
+
+        if (visitedPtr->contains(object))
+            return;
+
+        visitedPtr->insert(object);
+
+        std::string pad(indent * 2, ' ');
+
+        std::string objName = getNameByPtr(object);
+        uintptr_t objClassPtr = memory.readMemory<uintptr_t>(object + 0x10);
+        std::string objClass = getNameByPtr(objClassPtr);
+
+        std::cout << pad << objName << " class=" << objClass
+            << " [0x" << std::hex << object << std::dec << "]\n";
+
+        if (depth == 0)
+            return;
+
+        for (uintptr_t off = 0; off < scanSize; off += 0x8) {
+            uintptr_t ptr = memory.readMemory<uintptr_t>(object + off);
+            if (!ptr || ptr == object)
+                continue;
+
+            uintptr_t cls = memory.readMemory<uintptr_t>(ptr + 0x10);
+            std::string clsName = getNameByPtr(cls);
+            std::string name = getNameByPtr(ptr);
+
+            if (skipNone && (name.empty() || name == "None" || clsName.empty() || clsName == "None" || clsName == "TextureRenderTarget2D" || clsName == "Class" || clsName == "Texture2D" || clsName == "MaterialInstanceConstant" || clsName == "Function" || clsName == "Model" || clsName == "AnimBlueprintGeneratedClass" || clsName == "BlueprintGeneratedClass" || clsName == "NiagaraDataInterfaceVectorField" || clsName == "HorizontalBoxSlot"))
+                continue;
+
+            if (name.length() > maxNameLength || clsName.length() > maxNameLength)
+                continue;
+
+            std::cout << pad
+                << "  +0x" << std::hex << off << std::dec
+                << " -> 0x" << std::hex << ptr << std::dec
+                << " " << name
+                << " class=" << clsName
+                << "\n";
+
+            dumpObjectRefsDeep(ptr, scanSize, depth - 1, indent + 1, maxNameLength, skipNone, visitedPtr);
+        }
     }
 };
 

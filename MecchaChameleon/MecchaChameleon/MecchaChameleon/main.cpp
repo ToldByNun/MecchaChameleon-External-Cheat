@@ -59,8 +59,8 @@ int main() {
 		globals.overlay->beginFrame();
 		globals.menu->render();
 
-		if (globals.settings.esp.snaplines && !actors.empty())
-			globals.esp->renderSnaplines(actors, viewInfo);
+		if (!actors.empty())
+			globals.esp->renderESP(actors, viewInfo);
 
 		globals.overlay->endFrame();
 

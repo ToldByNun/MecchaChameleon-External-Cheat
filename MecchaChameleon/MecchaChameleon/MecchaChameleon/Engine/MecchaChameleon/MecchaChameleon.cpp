@@ -131,6 +131,25 @@ bool MecchaChameleon::validatePlayerArray() {
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
 		if (!this->check(pawn, "Pawn")) continue;
 
+		//this->dumpObjectRefsDeep(pawn, 0x1000, 2, 0, 40);
+
+		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + 0x400);
+		if (!this->check(headPosition, "HeadPosition")) continue;
+
+		this->dumpObjectRefsDeep(headPosition, 0x1000, 1, 0, 40);
+
+		for (uintptr_t off = 0x100; off < 0x300; off += 0x8) {
+			double x = memory.readMemory<double>(headPosition + off);
+			double y = memory.readMemory<double>(headPosition + off + 0x8);
+			double z = memory.readMemory<double>(headPosition + off + 0x10);
+
+			if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
+				std::abs(x) < 100000 && std::abs(y) < 100000 && std::abs(z) < 100000) {
+				std::cout << "+0x" << std::hex << off << std::dec
+					<< " vec3 = " << x << ", " << y << ", " << z << "\n";
+			}
+		}
+
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (!this->check(mesh, "Mesh")) continue;
 
@@ -183,6 +202,33 @@ bool MecchaChameleon::refresh() {
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
 		if (!pawn) continue;
 
+		/*HeadPosition class=SphereComponent [0x1E685A64C90]
+		  +0xA8 -> 0x1E6A58E7160 cLeon_game class=World
+		  cLeon_game class=World [0x1E6A58E7160]
+		  +0xC8 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
+		  BodyCapsule class=CapsuleComponent [0x1E594D0A390]
+		  +0x618 -> 0x1E6A58E7160 cLeon_game class=World
+		  +0x720 -> 0x1E69F56E410 Default Movement Mixer class=MovementMixer
+		  Default Movement Mixer class=MovementMixer [0x1E69F56E410]
+		  +0x760 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
+		  +0x768 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
+		  +0x770 -> 0x1E68838F010 Mesh class=SkeletalMeshComponent
+		  Mesh class=SkeletalMeshComponent [0x1E68838F010]
+		  +0x940 -> 0x1E689EB32B0 BackendLiaisonComponent class=MoverNetworkPhysicsLiaisonComponent
+		  BackendLiaisonComponent class=MoverNetworkPhysicsLiaisonComponent [0x1E689EB32B0]
+		  +0x978 -> 0x1E685A65200 ExtendedPhysicsCharacterMoverComponent class=ExtendedPhysicsCharacterMoverComponent_C
+		  ExtendedPhysicsCharacterMoverComponent class=ExtendedPhysicsCharacterMoverComponent_C [0x1E685A65200]
+		  +0x988 -> 0x1E5D6308170 MoverStateMachine class=MovementModeStateMachine
+		  MoverStateMachine class=MovementModeStateMachine [0x1E5D6308170]
+		  +0x990 -> 0x1E67403A380 MoverBlackboard class=MoverBlackboard
+		  MoverBlackboard class=MoverBlackboard [0x1E67403A380]*/
+		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + 0x400);
+		if (!this->check(headPosition, "HeadPosition")) continue;
+
+		double headRadius = this->memory.readMemory<double>(headPosition + 0x540);
+
+		double playerSize = this->memory.readMemory<double>(headPosition + 0x130);
+
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (mesh) {
 			this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
@@ -193,14 +239,11 @@ bool MecchaChameleon::refresh() {
 		uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);
 		if (!rootComponent) continue;
 
-		double characterHeight = this->memory.readMemory<double>(rootComponent + 0x150);
-		if (!characterHeight) continue;
-
 		FVector location = this->memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
 
 		if (location.x == 0 && location.y == 0 && location.z == 0) continue;
 
-		newActors.push_back({ location, characterHeight });
+		newActors.push_back({ location, headRadius, playerSize });
 	}
 
 	std::lock_guard<std::mutex> lock(this->dataMutex);
