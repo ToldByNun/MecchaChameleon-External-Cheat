@@ -1,6 +1,8 @@
 #ifndef MECCHACHAMELEON_HPP
-#define	MECCHACHAMELEON_HPP
+#define	MECCHACHAMELEON_HPP
+
 #include "../Memory/Memory.hpp"
+#include "../offsets.hpp"
 #include "../types.hpp"
 #include "../helpers.hpp"
 
@@ -10,65 +12,79 @@
 #include <atomic>
 #include <thread>
 #include <iomanip>
-#include <iostream>
+#include <iostream>
+
 struct TrackedActor {
     FVector location;
-};
+};
+
 class MecchaChameleon {
 public:
-	~MecchaChameleon();
+	~MecchaChameleon();
+
 	bool init();
 	bool update();
 	void getSnapshot(std::vector<TrackedActor>& outActors, FMinimalViewInfo& outViewInfo);
 	void startBackgroundUpdate();
-	void stopBackgroundUpdate();
+	void stopBackgroundUpdate();
+
 public:
     Memory memory;
-    Helpers helpers;
+    Helpers helpers;
+
 private:
     std::vector<TrackedActor> actors;
     FMinimalViewInfo viewInfo{};
     std::mutex dataMutex;
     std::atomic<bool> backgroundRunning{ false };
-    std::thread updateThread;
+    std::thread updateThread;
+
     uintptr_t world = 0;
     uintptr_t persistentLevel = 0;
     uintptr_t gameInstance = 0;
     uintptr_t localPlayer = 0;
     uintptr_t playerController = 0;
     uintptr_t cameraManager = 0;
-    uintptr_t gameState = 0;
+    uintptr_t gameState = 0;
+
     bool chainResolved = false;
     void updateLoop();
 
     std::string resolveName(uint32_t index) {
-        return helpers.resolveName(memory, memory.baseAddress, index);
-    }
+        return helpers.resolveName(memory, index);
+    }
+
     std::string getNameByPtr(uintptr_t actorPtr) {
-        int32_t fnameID = memory.readMemory<int32_t>(actorPtr + Offsets::SWorld::SLevel::SActor::Name);
+        int32_t fnameID = memory.readMemory<int32_t>(actorPtr + Offsets::SWorld::SLevel::SActor::Name);
+
         return resolveName(fnameID);
-    }
+    }
+
 	bool resolveChain();
-	bool resolveWorld();
 	bool resolvePersistentLevel();
 	bool resolveGameInstance();
 	bool resolveLocalPlayer();
 	bool resolvePlayerController();
 	bool resolveCameraManager();
 	bool resolveGameState();
-	bool validatePlayerArray();
+	bool validatePlayerArray();
+
     template <typename T, typename = void> struct is_tarray : std::false_type {};
     template <typename T> struct is_tarray<T, std::void_t<decltype(std::declval<T>().data), decltype(std::declval<T>().count)>> : std::true_type {};
 
     template <typename T, typename = void> struct is_fvector : std::false_type {};
-    template <typename T> struct is_fvector<T, std::void_t<decltype(std::declval<T>().x), decltype(std::declval<T>().y), decltype(std::declval<T>().z)>> : std::true_type {};
+    template <typename T> struct is_fvector<T, std::void_t<decltype(std::declval<T>().x), decltype(std::declval<T>().y), decltype(std::declval<T>().z)>> : std::true_type {};
+
     template <typename T, typename = void> struct is_fname : std::false_type {};
-    template <typename T> struct is_fname<T, std::void_t<decltype(std::declval<T>().comparisonIndex)>> : std::true_type {};
+    template <typename T> struct is_fname<T, std::void_t<decltype(std::declval<T>().comparisonIndex)>> : std::true_type {};
+
     template <typename T>
 
     bool check(const T& val, const std::string& name) {
-        bool valid = false;
-        std::string extraInfo = "";
+        bool valid = false;
+
+        std::string extraInfo = "";
+
         if constexpr (is_tarray<T>::value) {
             valid = (val.data != 0 && val.count >= 0 && val.count < 1000000);
             if (valid) extraInfo = "[Count: " + std::to_string(val.count) + "] at 0x" + std::to_string(val.data);
@@ -88,21 +104,30 @@ private:
             else {
                 valid = true;
             }
-        }
+        }
+
         if (!valid) {
             std::cout << "\033[1;31m[-] " << std::setw(32) << std::left << name << " : INVALID\033[0m" << std::endl;
 
-            return false;
-        }
-        std::cout << "\033[0m[+] " << std::setw(32) << std::left << name << " : ";
+            return false;
+
+        }
+
+        std::cout << "\033[0m[+] " << std::setw(32) << std::left << name << " : ";
+
         if constexpr (std::is_integral_v<T> || std::is_pointer_v<T>) {
             std::cout << "0x" << std::hex << std::uppercase << (uintptr_t)val << std::dec;
         }
         else {
             std::cout << "SUCCESS " << extraInfo;
-        }
-        std::cout << "\033[0m" << std::endl;
-        return true;
+        }
+
+        std::cout << "\033[0m" << std::endl;
+
+        return true;
+
     }
-};
-#endif // MECCHACHAMELEON_HPP
+};
+
+#endif // MECCHACHAMELEON_HPP
+

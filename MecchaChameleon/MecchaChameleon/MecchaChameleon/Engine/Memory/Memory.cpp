@@ -1,6 +1,10 @@
 #include "Memory.hpp"
 #include <TlHelp32.h>
 #include <iostream>
+#include <cctype>
+#include <cstring>
+#include <optional>
+#include <algorithm>
 
 uint32_t Memory::getProcessIdByName(const char* processName) {
 	uint32_t processId = 0;
@@ -45,6 +49,7 @@ bool Memory::attachToProcess(const char* processName) {
 		moduleEntry.dwSize = sizeof(moduleEntry);
 		if (Module32First(snapshot, &moduleEntry)) {
 			baseAddress = reinterpret_cast<uintptr_t>(moduleEntry.modBaseAddr);
+			moduleSize = moduleEntry.modBaseSize;
 		}
 		CloseHandle(snapshot);
 	}

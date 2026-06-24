@@ -2,13 +2,12 @@
 #define HELPERS_HPP
 
 #include "Memory/Memory.hpp"
-#include "offsets.hpp"
 #include <string>
 
 class Helpers {
 public:
-    std::string resolveName(Memory& memory, uintptr_t baseAddress, uint32_t index) {
-        uintptr_t namePool = baseAddress + Offsets::GNames;
+    std::string resolveName(Memory& memory, uint32_t index) {
+        uintptr_t namePool = memory.gNames;
 
         if (!namePool)
             return "None";

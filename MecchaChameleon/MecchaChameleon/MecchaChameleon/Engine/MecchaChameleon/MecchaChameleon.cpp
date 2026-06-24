@@ -46,16 +46,17 @@ bool MecchaChameleon::init() {
 	if (!this->check(memory.baseAddress, "BaseAddress"))
 		return false;
 
+	if (!this->check(this->memory.gWorld = this->memory.resolveAob(Offsets::Aob::GWorld, Offsets::Aob::GWorldInstructionOffset), "GWorld"))
+		return false;
+
+	if (!this->check(this->memory.gNames = this->memory.resolveAob(Offsets::Aob::GNames, Offsets::Aob::GNamesInstructionOffset), "GNames"))
+		return false;
+
 	if (!resolveChain())
 		return false;
 
 	chainResolved = true;
 	return true;
-}
-
-bool MecchaChameleon::resolveWorld() {
-	this->world = this->memory.readMemory<uintptr_t>(this->memory.baseAddress + Offsets::GWorld);
-	return this->check(this->world, "GWorld");
 }
 
 bool MecchaChameleon::resolvePersistentLevel() {
@@ -148,7 +149,6 @@ bool MecchaChameleon::validatePlayerArray() {
 }
 
 bool MecchaChameleon::resolveChain() {
-	if (!resolveWorld()) return false;
 	if (!resolvePersistentLevel()) return false;
 	if (!resolveGameInstance()) return false;
 	if (!resolveLocalPlayer()) return false;
@@ -191,9 +191,6 @@ bool MecchaChameleon::update() {
 
 	newActors.reserve(playerArray.count);
 
-	using SPawn = Offsets::SWorld::SGameState::SPlayerArray::SPawn;
-	using SMesh = Offsets::SWorld::SGameState::SPlayerArray::SMesh;
-
 	for (int i = 0; i < playerArray.count; i++) {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
 		if (!playerState)
@@ -203,11 +200,11 @@ bool MecchaChameleon::update() {
 		if (!pawn)
 			continue;
 
-		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + SPawn::Mesh);
+		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (mesh) {
-			this->memory.readMemory<uintptr_t>(mesh + SMesh::SkeletalMesh);
-			this->memory.readMemory<TArray>(mesh + SMesh::BoneSpaceTransforms);
-			this->memory.readMemory<TArray>(mesh + SMesh::ComponentSpaceTransforms);
+			this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
+			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::BoneSpaceTransforms);
+			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
 		}
 
 		uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);

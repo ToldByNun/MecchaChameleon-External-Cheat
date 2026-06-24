@@ -6,8 +6,13 @@
 #include <vector>
 
 namespace Offsets {
-    const uintptr_t GWorld = 0xA0B21F0;
-    const uintptr_t GNames = 0x9E40280;
+    namespace Aob {
+        inline constexpr const char* GNames = "80 3D ?? ?? ?? ?? 00 0F 84 ?? ?? ?? ?? 48 8D 05 ?? ?? ?? ?? E9 ?? ?? ?? ??";
+        inline constexpr uintptr_t GNamesInstructionOffset = 0xD;
+
+        inline constexpr const char* GWorld = "44 38 2D ?? ?? ?? ?? 48 8B 1D ?? ?? ?? ?? 74 ?? 48 85 DB 74 ?? 48 8B CB E8 ?? ?? ?? ??";
+        inline constexpr uintptr_t GWorldInstructionOffset = 0x7;
+    }
 
     struct SWorld {
         static constexpr uintptr_t PersistentLevel = 0x30;
