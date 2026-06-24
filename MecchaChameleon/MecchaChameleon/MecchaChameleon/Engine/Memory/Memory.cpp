@@ -5,6 +5,7 @@
 #include <cstring>
 #include <optional>
 #include <algorithm>
+#include <sstream>
 
 uint32_t Memory::getProcessIdByName(const char* processName) {
 	uint32_t processId = 0;
@@ -111,4 +112,80 @@ bool Memory::detachFromProcess() {
 	}
 
 	return false;
+}
+
+std::vector<PatternByte> Memory::parsePattern(const std::string& pattern) {
+	std::vector<PatternByte> bytes;
+	std::istringstream stream(pattern);
+	std::string token;
+
+	while (stream >> token) {
+		if (token == "?" || token == "??") {
+			bytes.push_back({ 0x00, true });
+			continue;
+		}
+
+		bytes.push_back({
+			static_cast<uint8_t>(std::stoul(token, nullptr, 16)),
+			false
+			});
+	}
+
+	return bytes;
+}
+
+uintptr_t Memory::findAob(uintptr_t start, size_t size, const std::string& pattern) {
+	std::vector<PatternByte> pat = parsePattern(pattern);
+	if (pat.empty() || size < pat.size()) return 0;
+
+	std::vector<uint8_t> buffer(size);
+	SIZE_T bytesRead = 0;
+
+	if (!ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(start), buffer.data(), size, &bytesRead))
+		return 0;
+
+	for (size_t i = 0; i + pat.size() <= bytesRead; i++) {
+		bool found = true;
+
+		for (size_t j = 0; j < pat.size(); j++) {
+			if (!pat[j].wildcard && buffer[i + j] != pat[j].value) {
+				found = false;
+				break;
+			}
+		}
+
+		if (found)
+			return start + i;
+	}
+
+	return 0;
+}
+
+uintptr_t Memory::resolveRip(uintptr_t instruction, int relOffset, int instructionSize) {
+	int32_t rel = readMemory<int32_t>(instruction + relOffset);
+	return instruction + instructionSize + rel;
+}
+
+AobResult Memory::resolveAob(
+	const std::string& pattern,
+	uintptr_t instructionOffset,
+	RipMode mode,
+	int relOffset,
+	int instructionSize
+) {
+	AobResult result{};
+
+	result.match = findAob(baseAddress, moduleSize, pattern);
+	if (!result.match)
+		return result;
+
+	result.instruction = result.match + instructionOffset;
+	result.target = resolveRip(result.instruction, relOffset, instructionSize);
+
+	if (mode == RipMode::Mov)
+		result.value = readMemory<uintptr_t>(result.target);
+	else
+		result.value = result.target;
+
+	return result;
 }

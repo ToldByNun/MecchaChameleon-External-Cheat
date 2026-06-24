@@ -7,7 +7,7 @@
 class Helpers {
 public:
     std::string resolveName(Memory& memory, uint32_t index) {
-        uintptr_t namePool = memory.gNames;
+        uintptr_t namePool = mecchaChameleon.world;
 
         if (!namePool)
             return "None";

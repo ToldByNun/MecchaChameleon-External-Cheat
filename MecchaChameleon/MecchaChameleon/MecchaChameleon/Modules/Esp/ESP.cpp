@@ -10,8 +10,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	const ImVec2 screenBottom = { displaySize.x * 0.5f, displaySize.y };
 
-	if (actors.empty())
-		return;
+	if (actors.empty()) return;
 
 	Unreal unreal;
 	int behindCamera = 0;
@@ -36,6 +35,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 			IM_COL32(255, 255, 255, 200),
 			1.5f
 		);
+
 		linesDrawn++;
 	}
 }

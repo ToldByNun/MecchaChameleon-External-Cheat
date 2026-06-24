@@ -16,6 +16,7 @@
 
 struct TrackedActor {
     FVector location;
+    double height;
 };
 
 class MecchaChameleon {
@@ -33,19 +34,20 @@ public:
     Helpers helpers;
 
 private:
-    std::vector<TrackedActor> actors;
-    FMinimalViewInfo viewInfo{};
-    std::mutex dataMutex;
-    std::atomic<bool> backgroundRunning{ false };
-    std::thread updateThread;
-
     uintptr_t world = 0;
+    uintptr_t names = 0;
     uintptr_t persistentLevel = 0;
     uintptr_t gameInstance = 0;
     uintptr_t localPlayer = 0;
     uintptr_t playerController = 0;
     uintptr_t cameraManager = 0;
     uintptr_t gameState = 0;
+
+    std::vector<TrackedActor> actors;
+    FMinimalViewInfo viewInfo{};
+    std::mutex dataMutex;
+    std::atomic<bool> backgroundRunning{ false };
+    std::thread updateThread;
 
     bool chainResolved = false;
     void updateLoop();

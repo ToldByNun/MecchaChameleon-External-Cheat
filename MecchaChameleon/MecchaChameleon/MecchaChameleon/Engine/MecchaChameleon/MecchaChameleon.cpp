@@ -9,8 +9,7 @@ MecchaChameleon::~MecchaChameleon() {
 }
 
 void MecchaChameleon::startBackgroundUpdate() {
-	if (this->backgroundRunning)
-		return;
+	if (this->backgroundRunning) return;
 
 	this->backgroundRunning = true;
 	this->updateThread = std::thread(&MecchaChameleon::updateLoop, this);
@@ -38,29 +37,32 @@ void MecchaChameleon::getSnapshot(std::vector<TrackedActor>& outActors, FMinimal
 }
 
 bool MecchaChameleon::init() {
-	if (!memory.attachToProcess("PenguinHotel-Win64-Shipping.exe")) {
-		std::cout << "[-] Failed to attach to process.\n";
-		return false;
-	}
+	if (!memory.attachToProcess("PenguinHotel-Win64-Shipping.exe")) std::cout << "[-] Failed to attach to process.\n"; return false;
 
-	if (!this->check(memory.baseAddress, "BaseAddress"))
-		return false;
+	if (!this->check(memory.baseAddress, "BaseAddress")) return false;
 
-	if (!this->check(this->memory.gWorld = this->memory.resolveAob(Offsets::Aob::GWorld, Offsets::Aob::GWorldInstructionOffset), "GWorld"))
-		return false;
+	this->world = this->memory.resolveAob(
+		Offsets::AOBs::GWorldAOB,
+		Offsets::AOBs::GWorldInstructionOffset,
+		RipMode::Mov
+	).value; Offsets::GWorld = this->world;
 
-	if (!this->check(this->memory.gNames = this->memory.resolveAob(Offsets::Aob::GNames, Offsets::Aob::GNamesInstructionOffset), "GNames"))
-		return false;
+	this->names = this->memory.resolveAob(
+		Offsets::AOBs::GNamesAOB,
+		Offsets::AOBs::GNamesInstructionOffset,
+		RipMode::Lea
+	).value; Offsets::GNames = this->names;
 
-	if (!resolveChain())
-		return false;
+	if (!resolveChain()) return false;
 
 	chainResolved = true;
+	
 	return true;
 }
 
 bool MecchaChameleon::resolvePersistentLevel() {
 	this->persistentLevel = this->memory.readMemory<uintptr_t>(this->world + Offsets::SWorld::PersistentLevel);
+	
 	return this->check(this->persistentLevel, "PersistentLevel");
 }
 
@@ -71,10 +73,10 @@ bool MecchaChameleon::resolveGameInstance() {
 
 bool MecchaChameleon::resolveLocalPlayer() {
 	TArray localPlayers = this->memory.readMemory<TArray>(this->gameInstance + Offsets::SWorld::SGameInstance::LocalPlayers);
-	if (!this->check(localPlayers, "LocalPlayers"))
-		return false;
+	if (!this->check(localPlayers, "LocalPlayers")) return false;
 
 	this->localPlayer = this->memory.readMemory<uintptr_t>(localPlayers.data);
+	
 	return this->check(this->localPlayer, "LocalPlayer");
 }
 
@@ -82,6 +84,7 @@ bool MecchaChameleon::resolvePlayerController() {
 	this->playerController = this->memory.readMemory<uintptr_t>(
 		this->localPlayer + Offsets::SWorld::SGameInstance::SLocalPlayers::PlayerController
 	);
+	
 	return this->check(this->playerController, "PlayerController");
 }
 
@@ -89,60 +92,43 @@ bool MecchaChameleon::resolveCameraManager() {
 	this->cameraManager = this->memory.readMemory<uintptr_t>(
 		this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::PlayerCameraManager
 	);
-	if (!this->check(this->cameraManager, "CameraManager"))
-		return false;
+	if (!this->check(this->cameraManager, "CameraManager")) return false;
 
 	FMinimalViewInfo cameraViewInfo = this->memory.readMemory<FMinimalViewInfo>(
 		this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo
 	);
+	
 	return this->check(cameraViewInfo, "ViewInfo");
 }
 
 bool MecchaChameleon::resolveGameState() {
 	this->gameState = this->memory.readMemory<uintptr_t>(this->world + Offsets::SWorld::GameState);
+	
 	return this->check(this->gameState, "GameState");
 }
 
 bool MecchaChameleon::validatePlayerArray() {
 	TArray playerArray = memory.readMemory<TArray>(gameState + Offsets::SWorld::SGameState::PlayerArray);
-	if (!this->check(playerArray, "PlayerArray"))
-		return false;
-
-	using SPawn = Offsets::SWorld::SGameState::SPlayerArray::SPawn;
-	using SMesh = Offsets::SWorld::SGameState::SPlayerArray::SMesh;
+	if (!this->check(playerArray, "PlayerArray")) return false;
 
 	for (int i = 0; i < playerArray.count; i++) {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
-		if (!this->check(playerState, "PlayerState"))
-			continue;
+		if (!this->check(playerState, "PlayerState")) continue;
 
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
-		if (!this->check(pawn, "Pawn"))
-			continue;
+		if (!this->check(pawn, "Pawn")) continue;
 
-		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + SPawn::Mesh);
-		if (!this->check(mesh, "Mesh"))
-			continue;
+		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
+		if (!this->check(mesh, "Mesh")) continue;
 
-		uintptr_t skeletalMesh = this->memory.readMemory<uintptr_t>(mesh + SMesh::SkeletalMesh);
-		if (!this->check(skeletalMesh, "SkeletalMesh"))
-			continue;
+		uintptr_t skeletalMesh = this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
+		if (!this->check(skeletalMesh, "SkeletalMesh")) continue;
 
-		TArray boneSpace = this->memory.readMemory<TArray>(mesh + SMesh::BoneSpaceTransforms);
-		if (!this->check(boneSpace, "BoneSpaceTransforms"))
-			continue;
+		TArray boneSpace = this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::BoneSpaceTransforms);
+		if (!this->check(boneSpace, "BoneSpaceTransforms")) continue;
 
-		TArray componentSpace = this->memory.readMemory<TArray>(mesh + SMesh::ComponentSpaceTransforms);
-		if (!this->check(componentSpace, "ComponentSpaceTransforms"))
-			continue;
-
-		printf("mesh=%s class=%s skeletal=%s bones=%d comp=%d\n",
-			getNameByPtr(mesh).c_str(),
-			getNameByPtr(this->memory.readMemory<uintptr_t>(mesh + SMesh::Class)).c_str(),
-			getNameByPtr(skeletalMesh).c_str(),
-			boneSpace.count,
-			componentSpace.count
-		);
+		TArray componentSpace = this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
+		if (!this->check(componentSpace, "ComponentSpaceTransforms")) continue;
 	}
 
 	return true;
@@ -160,45 +146,25 @@ bool MecchaChameleon::resolveChain() {
 }
 
 bool MecchaChameleon::update() {
-	if (!this->chainResolved)
-		return false;
+	if (!this->chainResolved) return false;
 
 	std::vector<TrackedActor> newActors;
 
-	auto logFail = [](const char* reason) {
-		static auto last = std::chrono::steady_clock::now();
-		const auto now = std::chrono::steady_clock::now();
-		if (now - last < std::chrono::seconds(2))
-			return;
-		last = now;
-		std::cout << "[update] error: " << reason << "\n";
-	};
+	if (!this->gameState || !this->cameraManager) return false;
 
-	if (!this->gameState || !this->cameraManager) {
-		logFail("chain pointers invalid");
-		return false;
-	}
-
-	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(
-		this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo
-	);
+	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo);
 
 	TArray playerArray = this->memory.readMemory<TArray>(this->gameState + Offsets::SWorld::SGameState::PlayerArray);
-	if (!playerArray.data || playerArray.count <= 0 || playerArray.count > 1000000) {
-		logFail("PlayerArray empty");
-		return false;
-	}
+	if (!playerArray.data || playerArray.count <= 0 || playerArray.count > 1000000) return false;
 
 	newActors.reserve(playerArray.count);
 
 	for (int i = 0; i < playerArray.count; i++) {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
-		if (!playerState)
-			continue;
+		if (!playerState) continue;
 
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
-		if (!pawn)
-			continue;
+		if (!pawn) continue;
 
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (mesh) {
@@ -208,24 +174,21 @@ bool MecchaChameleon::update() {
 		}
 
 		uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);
-		if (!rootComponent)
-			continue;
+		if (!rootComponent) continue;
 
-		FVector location = this->memory.readMemory<FVector>(
-			rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation
-		);
+		double characterHeight = this->memory.readMemory<double>(rootComponent + 0x150);
+		if (!characterHeight) continue;
 
-		if (location.x == 0 && location.y == 0 && location.z == 0)
-			continue;
+		FVector location = this->memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
 
-		newActors.push_back({ location });
+		if (location.x == 0 && location.y == 0 && location.z == 0) continue;
+
+		newActors.push_back({ location, characterHeight });
 	}
 
-	{
-		std::lock_guard<std::mutex> lock(this->dataMutex);
-		this->actors = std::move(newActors);
-		this->viewInfo = newViewInfo;
-	}
+	std::lock_guard<std::mutex> lock(this->dataMutex);
+	this->actors = std::move(newActors);
+	this->viewInfo = newViewInfo;
 
 	return true;
 }
