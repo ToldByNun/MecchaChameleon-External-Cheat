@@ -15,8 +15,6 @@ struct EspSettings {
     bool chineseHat = false;
     bool onlyEnemies = false;
     bool isTeammateColorEnabled = false;
-    ImColor boxColor = ImColor(255, 255, 255, 255);
-    ImColor enemyBoxColor = ImColor(237, 52, 52, 255);
 };
 
 struct AimbotSettings {

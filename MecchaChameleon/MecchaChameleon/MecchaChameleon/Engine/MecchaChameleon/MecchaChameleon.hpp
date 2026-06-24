@@ -35,6 +35,7 @@ enum PlayerRole {
 
 class MecchaChameleon : public IManagedClass {
 public:
+    int runtimeThing = 0;
 	~MecchaChameleon();
 
 	bool init() override;
@@ -48,8 +49,8 @@ public:
     Memory memory;
     Helpers helpers;
 
+    void applyFlatChams(uintptr_t pawn);
     bool resolveChain();
-
 private:
     uintptr_t world = 0;
     uintptr_t names = 0;
@@ -186,8 +187,8 @@ public:
             uintptr_t cls = memory.readMemory<uintptr_t>(ptr + 0x10);
             std::string clsName = this->getNameByPtr(cls);
             std::string name = this->getNameByPtr(ptr);
-
-            if (skipNone && (name.empty() || name == "None" || clsName.empty() || clsName == "None" || clsName == "TextureRenderTarget2D" || clsName == "Class" || clsName == "Texture2D" || clsName == "MaterialInstanceConstant" || clsName == "Function" || clsName == "Model" || clsName == "AnimBlueprintGeneratedClass" || clsName == "BlueprintGeneratedClass" || clsName == "NiagaraDataInterfaceVectorField" || clsName == "HorizontalBoxSlot"))
+            //  || clsName == "None" || clsName == "TextureRenderTarget2D" || clsName == "Class" || clsName == "Texture2D" || clsName == "MaterialInstanceConstant" || clsName == "Function" || clsName == "Model" || clsName == "AnimBlueprintGeneratedClass" || clsName == "BlueprintGeneratedClass" || clsName == "NiagaraDataInterfaceVectorField" || clsName == "HorizontalBoxSlot"
+            if (skipNone && (name.empty() || name == "None" || clsName.empty()))
                 continue;
 
             if (name.length() > maxNameLength || clsName.length() > maxNameLength)

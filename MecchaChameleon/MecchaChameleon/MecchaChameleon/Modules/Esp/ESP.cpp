@@ -79,10 +79,10 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			bottomRight,
 			globals.settings.esp.isTeammateColorEnabled ? 
 			(
-				actor.sameTeam ? globals.settings.esp.boxColor : globals.settings.esp.enemyBoxColor
+				actor.sameTeam ? IM_COL32(255, 255, 255, 255) : IM_COL32(237, 52, 52, 255)
 			) : 
 			(
-				globals.settings.esp.boxColor
+				IM_COL32(255, 255, 255, 255)
 			),
 			0.0f, ImDrawFlags_None, 2.0f
 		);

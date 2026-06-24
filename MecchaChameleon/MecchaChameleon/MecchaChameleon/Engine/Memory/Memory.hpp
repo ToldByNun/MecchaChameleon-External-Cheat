@@ -49,6 +49,11 @@ public:
 		return buffer;
 	}
 
+	template <typename T>
+	bool writeMemory(uintptr_t address, T value) {
+		return WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), &value, sizeof(T), nullptr);
+	}
+
 	bool readRawMemory(uintptr_t address, void* buffer, size_t size) {
 		return ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer, size, nullptr);
 	}
