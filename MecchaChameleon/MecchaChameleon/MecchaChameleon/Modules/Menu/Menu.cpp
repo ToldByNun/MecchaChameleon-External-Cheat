@@ -1,21 +1,17 @@
 #include "Menu.hpp"
-#include "../../Engine/ImGui/imgui.h"
 
-namespace settings {
-	bool menuOpen = true;
-	EspSettings esp{};
-	AimbotSettings aimbot{};
-}
+#include "../../Manager/Globals/Globals.hpp"
+#include "../../Engine/ImGui/imgui.h"
 
 void Menu::handleInput() {
 	if (GetAsyncKeyState(VK_INSERT) & 1)
-		settings::menuOpen = !settings::menuOpen;
+		globals.settings.menuOpen = !globals.settings.menuOpen;
 }
 
 void Menu::render() {
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
-	if (!settings::menuOpen) {
+	if (!globals.settings.menuOpen) {
 		ImGui::GetBackgroundDrawList()->AddText(
 			ImVec2(10.f, 10.f),
 			IM_COL32(255, 255, 255, 230),
@@ -29,31 +25,31 @@ void Menu::render() {
 		ImGuiCond_FirstUseEver
 	);
 	ImGui::SetNextWindowSize(ImVec2(420.f, 360.f), ImGuiCond_FirstUseEver);
-	ImGui::Begin("MecchaChameleon", &settings::menuOpen, ImGuiWindowFlags_NoCollapse);
+	ImGui::Begin("MecchaChameleon", &globals.settings.menuOpen, ImGuiWindowFlags_NoCollapse);
 
 	if (ImGui::BeginTabBar("MainTabs")) {
 		if (ImGui::BeginTabItem("ESP")) {
-			ImGui::Checkbox("Box ESP", &settings::esp.box);
-			ImGui::Checkbox("Skeleton ESP", &settings::esp.skeleton);
-			ImGui::Checkbox("Name / Distance", &settings::esp.nameDistance);
-			ImGui::Checkbox("Snaplines", &settings::esp.snaplines);
+			ImGui::Checkbox("Box ESP", &globals.settings.esp.box);
+			ImGui::Checkbox("Skeleton ESP", &globals.settings.esp.skeleton);
+			ImGui::Checkbox("Name / Distance", &globals.settings.esp.nameDistance);
+			ImGui::Checkbox("Snaplines", &globals.settings.esp.snaplines);
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Aimbot")) {
-			ImGui::Checkbox("Enabled", &settings::aimbot.enabled);
-			ImGui::Checkbox("FOV limit", &settings::aimbot.fovLimit);
-			if (settings::aimbot.fovLimit)
-				ImGui::SliderFloat("FOV", &settings::aimbot.fov, 1.f, 180.f, "%.0f");
-			ImGui::Checkbox("Smoothing", &settings::aimbot.smoothing);
-			if (settings::aimbot.smoothing)
-				ImGui::SliderFloat("Smooth", &settings::aimbot.smooth, 1.f, 20.f, "%.1f");
+			ImGui::Checkbox("Enabled", &globals.settings.aimbot.enabled);
+			ImGui::Checkbox("FOV limit", &globals.settings.aimbot.fovLimit);
+			if (globals.settings.aimbot.fovLimit)
+				ImGui::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
+			ImGui::Checkbox("Smoothing", &globals.settings.aimbot.smoothing);
+			if (globals.settings.aimbot.smoothing)
+				ImGui::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Misc")) {
-			ImGui::Text("INSERT — toggle menu");
-			ImGui::Text("Research build — features are placeholders.");
+			ImGui::Text("INSERT - toggle menu");
+			ImGui::Text("Research build - features are placeholders.");
 			ImGui::EndTabItem();
 		}
 
@@ -62,4 +58,3 @@ void Menu::render() {
 
 	ImGui::End();
 }
-

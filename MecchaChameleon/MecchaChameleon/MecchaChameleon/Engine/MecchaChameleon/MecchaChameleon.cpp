@@ -1,4 +1,6 @@
 #include "MecchaChameleon.hpp"
+
+#include "../../Manager/Globals/Globals.hpp"
 #include "../offsets.hpp"
 #include <iostream>
 #include <chrono>
@@ -6,6 +8,20 @@
 
 MecchaChameleon::~MecchaChameleon() {
 	stopBackgroundUpdate();
+}
+
+void MecchaChameleon::deinit() {
+	stopBackgroundUpdate();
+	chainResolved = false;
+	world = 0;
+	names = 0;
+	persistentLevel = 0;
+	gameInstance = 0;
+	localPlayer = 0;
+	playerController = 0;
+	cameraManager = 0;
+	gameState = 0;
+	memory.detachFromProcess();
 }
 
 void MecchaChameleon::startBackgroundUpdate() {
@@ -37,7 +53,10 @@ void MecchaChameleon::getSnapshot(std::vector<TrackedActor>& outActors, FMinimal
 }
 
 bool MecchaChameleon::init() {
-	if (!memory.attachToProcess("PenguinHotel-Win64-Shipping.exe")) std::cout << "[-] Failed to attach to process.\n"; return false;
+	if (!memory.attachToProcess("PenguinHotel-Win64-Shipping.exe")) {
+		std::cout << "[-] Failed to attach to process.\n";
+		return false;
+	}
 
 	if (!this->check(memory.baseAddress, "BaseAddress")) return false;
 
@@ -56,13 +75,11 @@ bool MecchaChameleon::init() {
 	if (!resolveChain()) return false;
 
 	chainResolved = true;
-	
 	return true;
 }
 
 bool MecchaChameleon::resolvePersistentLevel() {
 	this->persistentLevel = this->memory.readMemory<uintptr_t>(this->world + Offsets::SWorld::PersistentLevel);
-	
 	return this->check(this->persistentLevel, "PersistentLevel");
 }
 
@@ -76,7 +93,6 @@ bool MecchaChameleon::resolveLocalPlayer() {
 	if (!this->check(localPlayers, "LocalPlayers")) return false;
 
 	this->localPlayer = this->memory.readMemory<uintptr_t>(localPlayers.data);
-	
 	return this->check(this->localPlayer, "LocalPlayer");
 }
 
@@ -84,7 +100,6 @@ bool MecchaChameleon::resolvePlayerController() {
 	this->playerController = this->memory.readMemory<uintptr_t>(
 		this->localPlayer + Offsets::SWorld::SGameInstance::SLocalPlayers::PlayerController
 	);
-	
 	return this->check(this->playerController, "PlayerController");
 }
 
@@ -97,13 +112,11 @@ bool MecchaChameleon::resolveCameraManager() {
 	FMinimalViewInfo cameraViewInfo = this->memory.readMemory<FMinimalViewInfo>(
 		this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo
 	);
-	
 	return this->check(cameraViewInfo, "ViewInfo");
 }
 
 bool MecchaChameleon::resolveGameState() {
 	this->gameState = this->memory.readMemory<uintptr_t>(this->world + Offsets::SWorld::GameState);
-	
 	return this->check(this->gameState, "GameState");
 }
 
@@ -145,7 +158,11 @@ bool MecchaChameleon::resolveChain() {
 	return true;
 }
 
-bool MecchaChameleon::update() {
+void MecchaChameleon::update() {
+	refresh();
+}
+
+bool MecchaChameleon::refresh() {
 	if (!this->chainResolved) return false;
 
 	std::vector<TrackedActor> newActors;

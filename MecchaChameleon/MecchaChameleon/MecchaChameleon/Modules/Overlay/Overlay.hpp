@@ -1,13 +1,15 @@
 #ifndef OVERLAY_HPP
 #define OVERLAY_HPP
 
-#include "../Menu/Menu.hpp"
+#include "../../Manager/Classmanager/Classmanager.hpp"
 #include <Windows.h>
 #include <d3d11.h>
 
-class Overlay {
+class Overlay : public IManagedClass {
 public:
+	bool init() override;
 	bool init(HWND targetWindow);
+	void deinit() override;
 	void shutdown();
 
 	bool processMessages();
@@ -21,8 +23,6 @@ public:
 	bool isRunning() const { return running; }
 
 private:
-	Menu menu;
-
 	bool createOverlayWindow(int x, int y, int w, int h);
 	bool createDeviceD3D(int width, int height);
 	void cleanupDeviceD3D();
@@ -40,8 +40,9 @@ private:
 	IDXGISwapChain* swapChain = nullptr;
 	ID3D11RenderTargetView* renderTargetView = nullptr;
 
-	bool running = true;
+	bool running = false;
 	bool clickThrough = true;
+	bool imguiInitialized = false;
 	int width = 0;
 	int height = 0;
 	int lastX = 0;

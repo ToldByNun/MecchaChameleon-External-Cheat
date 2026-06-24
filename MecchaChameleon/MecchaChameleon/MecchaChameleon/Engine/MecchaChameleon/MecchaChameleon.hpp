@@ -1,6 +1,7 @@
 #ifndef MECCHACHAMELEON_HPP
-#define	MECCHACHAMELEON_HPP
+#define MECCHACHAMELEON_HPP
 
+#include "../../Manager/Classmanager/Classmanager.hpp"
 #include "../Memory/Memory.hpp"
 #include "../offsets.hpp"
 #include "../types.hpp"
@@ -19,12 +20,13 @@ struct TrackedActor {
     double height;
 };
 
-class MecchaChameleon {
+class MecchaChameleon : public IManagedClass {
 public:
 	~MecchaChameleon();
 
-	bool init();
-	bool update();
+	bool init() override;
+	void deinit() override;
+	void update() override;
 	void getSnapshot(std::vector<TrackedActor>& outActors, FMinimalViewInfo& outViewInfo);
 	void startBackgroundUpdate();
 	void stopBackgroundUpdate();
@@ -70,6 +72,7 @@ private:
 	bool resolveCameraManager();
 	bool resolveGameState();
 	bool validatePlayerArray();
+    bool refresh();
 
     template <typename T, typename = void> struct is_tarray : std::false_type {};
     template <typename T> struct is_tarray<T, std::void_t<decltype(std::declval<T>().data), decltype(std::declval<T>().count)>> : std::true_type {};
@@ -81,7 +84,6 @@ private:
     template <typename T> struct is_fname<T, std::void_t<decltype(std::declval<T>().comparisonIndex)>> : std::true_type {};
 
     template <typename T>
-
     bool check(const T& val, const std::string& name) {
         bool valid = false;
 
@@ -110,9 +112,7 @@ private:
 
         if (!valid) {
             std::cout << "\033[1;31m[-] " << std::setw(32) << std::left << name << " : INVALID\033[0m" << std::endl;
-
             return false;
-
         }
 
         std::cout << "\033[0m[+] " << std::setw(32) << std::left << name << " : ";
@@ -125,11 +125,8 @@ private:
         }
 
         std::cout << "\033[0m" << std::endl;
-
         return true;
-
     }
 };
 
 #endif // MECCHACHAMELEON_HPP
-

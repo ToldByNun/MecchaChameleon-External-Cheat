@@ -1,5 +1,7 @@
 #include "Overlay.hpp"
 
+#include "../../Manager/Globals/Globals.hpp"
+#include "../../Engine/MecchaChameleon/MecchaChameleon.hpp"
 #include "../../Engine/ImGui/imgui.h"
 #include "../../Engine/ImGui/imgui_impl_win32.h"
 #include "../../Engine/ImGui/imgui_impl_dx11.h"
@@ -18,10 +20,21 @@ namespace {
 	constexpr wchar_t kWindowClassName[] = L"MecchaOverlayClass";
 }
 
+bool Overlay::init() {
+	auto* shared = static_cast<Globals*>(state);
+	if (!shared || !shared->mecchaChameleon)
+		return false;
+
+	return init(shared->mecchaChameleon->memory.windowHandle);
+}
+
 bool Overlay::init(HWND targetWindow) {
 	if (!targetWindow || !IsWindow(targetWindow))
 		return false;
 
+	running = true;
+	clickThrough = true;
+	imguiInitialized = false;
 	targetHwnd = targetWindow;
 	g_overlay = this;
 
@@ -51,6 +64,7 @@ bool Overlay::init(HWND targetWindow) {
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+	imguiInitialized = true;
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -66,16 +80,23 @@ bool Overlay::init(HWND targetWindow) {
 	ImGui_ImplDX11_Init(device, context);
 	ImGui_ImplWin32_EnableAlphaCompositing(overlayHwnd);
 
-	setClickThrough(!settings::menuOpen);
+	setClickThrough(!globals.settings.menuOpen);
 	syncPosition();
 
 	return true;
 }
 
+void Overlay::deinit() {
+	shutdown();
+}
+
 void Overlay::shutdown() {
-	ImGui_ImplDX11_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-	ImGui::DestroyContext();
+	if (imguiInitialized) {
+		ImGui_ImplDX11_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+		imguiInitialized = false;
+	}
 
 	cleanupDeviceD3D();
 
@@ -84,7 +105,11 @@ void Overlay::shutdown() {
 		overlayHwnd = nullptr;
 	}
 
-	UnregisterClassW(kWindowClassName, GetModuleHandleW(nullptr));
+	if (windowClass.lpszClassName)
+		UnregisterClassW(kWindowClassName, GetModuleHandleW(nullptr));
+
+	targetHwnd = nullptr;
+	running = false;
 	g_overlay = nullptr;
 }
 
@@ -252,12 +277,18 @@ bool Overlay::processMessages() {
 }
 
 void Overlay::beginFrame() {
+	if (!imguiInitialized)
+		return;
+
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 }
 
 void Overlay::endFrame() {
+	if (!imguiInitialized || !context || !renderTargetView || !swapChain)
+		return;
+
 	ImGui::Render();
 
 	const float clearColor[4] = { 0.f, 0.f, 0.f, 0.f };

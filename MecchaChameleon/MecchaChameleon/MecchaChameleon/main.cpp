@@ -3,59 +3,66 @@
 #include <chrono>
 #include <Windows.h>
 
+#include "Manager/Classmanager/Classmanager.hpp"
+#include "Manager/Globals/Globals.hpp"
 #include "Engine/MecchaChameleon/MecchaChameleon.hpp"
 #include "Modules/Overlay/Overlay.hpp"
 #include "Modules/Menu/Menu.hpp"
 #include "Modules/ESP/ESP.hpp"
 
 int main() {
-	MecchaChameleon mecchaChameleon;
-	if (!mecchaChameleon.init()) return 1;
+	ClassManager classManager;
+	globals = {};
+	globals.classManager = &classManager;
+	classManager.setState(&globals);
 
-	if (!mecchaChameleon.memory.windowHandle) {
-		std::cout << "[-] No game window — cannot create overlay.\n";
+	globals.mecchaChameleon = classManager.addClass<MecchaChameleon>("mecchaChameleon");
+	globals.menu = classManager.addClass<Menu>("menu");
+	globals.esp = classManager.addClass<ESP>("esp");
+	globals.overlay = classManager.addClass<Overlay>("overlay");
+
+	if (!classManager.init()) {
+		globals = {};
 		return 1;
 	}
 
-	Overlay overlay;
-	if (!overlay.init(mecchaChameleon.memory.windowHandle)) {
-		std::cout << "[-] Overlay init failed.\n";
+	if (!globals.mecchaChameleon || !globals.menu || !globals.esp || !globals.overlay)
+		return 1;
+
+	if (!globals.mecchaChameleon->memory.windowHandle) {
+		std::cout << "[-] No game window - cannot create overlay.\n";
+		classManager.deinit();
+		globals = {};
 		return 1;
 	}
-
-	ESP esp;
-	Menu menu;
 
 	std::cout << "[+] Overlay running. Press INSERT to toggle menu.\n";
 
-	mecchaChameleon.startBackgroundUpdate();
+	globals.mecchaChameleon->startBackgroundUpdate();
 
 	const double targetFrameTime = 1.0 / 240.0;
-	auto lastEspLog = std::chrono::steady_clock::now();
 
-	while (overlay.isRunning()) {
+	while (globals.overlay->isRunning()) {
 		auto frameStart = std::chrono::high_resolution_clock::now();
 
-		overlay.syncPosition();
-		if (!overlay.processMessages())
+		globals.overlay->syncPosition();
+		if (!globals.overlay->processMessages())
 			break;
 
-		menu.handleInput();
-		overlay.setClickThrough(!settings::menuOpen);
+		globals.menu->handleInput();
+		globals.overlay->setClickThrough(!globals.settings.menuOpen);
 
 		std::vector<TrackedActor> actors;
 		FMinimalViewInfo viewInfo{};
-		mecchaChameleon.getSnapshot(actors, viewInfo);
+		globals.mecchaChameleon->getSnapshot(actors, viewInfo);
 
-		overlay.beginFrame();
-		menu.render();
+		globals.overlay->beginFrame();
+		globals.menu->render();
 
-		if (settings::esp.snaplines) {
-			if (!actors.empty())
-				esp.renderSnaplines(actors, viewInfo);
-		}
+		if (globals.settings.esp.snaplines && !actors.empty())
+			globals.esp->renderSnaplines(actors, viewInfo);
 
-		overlay.endFrame();
+		globals.overlay->endFrame();
 
 		auto frameEnd = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = frameEnd - frameStart;
@@ -64,7 +71,8 @@ int main() {
 		}
 	}
 
-	mecchaChameleon.stopBackgroundUpdate();
-	overlay.shutdown();
+	globals.mecchaChameleon->stopBackgroundUpdate();
+	classManager.deinit();
+	globals = {};
 	return 0;
 }

@@ -14,8 +14,8 @@ namespace Offsets {
         inline constexpr uintptr_t GNamesInstructionOffset = 0xD;
     }
 
-    uintptr_t GWorld = 0;
-    uintptr_t GNames = 0;
+    inline uintptr_t GWorld = 0;
+    inline uintptr_t GNames = 0;
 
     struct SWorld {
         static constexpr uintptr_t PersistentLevel = 0x30;

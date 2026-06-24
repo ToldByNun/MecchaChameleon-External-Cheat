@@ -2,12 +2,13 @@
 #define HELPERS_HPP
 
 #include "Memory/Memory.hpp"
+#include "offsets.hpp"
 #include <string>
 
 class Helpers {
 public:
     std::string resolveName(Memory& memory, uint32_t index) {
-        uintptr_t namePool = mecchaChameleon.world;
+        uintptr_t namePool = Offsets::GNames;
 
         if (!namePool)
             return "None";
