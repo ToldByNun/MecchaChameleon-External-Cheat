@@ -51,12 +51,12 @@ FVector2D Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& acto
 	for (const TrackedActor& actor : actors) {
 		if (!this->isInFoV(actor, viewInfo) || actor.isLocalPlayer || actor.sameTeam) continue;
 
-		FVector2D currentEnemyScrenPos;
+		FVector2D currentEnemyScreenPos;
 
 		bool bHeadPosition2D = this->unreal.WorldToScreen(
 			viewInfo,
 			actor.location,
-			currentEnemyScrenPos,
+			currentEnemyScreenPos,
 			displaySize.x,
 			displaySize.y
 		);
@@ -64,14 +64,14 @@ FVector2D Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& acto
 		if (!bHeadPosition2D) continue;
 
 		float distance = std::hypot(
-			currentEnemyScrenPos.x - screenCenter.x,
-			currentEnemyScrenPos.y - screenCenter.y
+			currentEnemyScreenPos.x - screenCenter.x,
+			currentEnemyScreenPos.y - screenCenter.y
 		);
 
 		if (distance > closestDistance) continue;
 
 		closestDistance = distance;
-		bestHeadPosition = currentEnemyScrenPos;
+		bestHeadPosition = currentEnemyScreenPos;
 	}
 
 	return bestHeadPosition;

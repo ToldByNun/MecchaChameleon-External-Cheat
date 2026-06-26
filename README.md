@@ -4,7 +4,7 @@
 
 ![C++](https://img.shields.io/badge/C++-20-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)
+![Version](https://img.shields.io/badge/version-v0.0.1-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine-black)
 
 </div>
@@ -29,7 +29,7 @@ External cheat for **MecchaChameleon** (UE5) — built for **memory research and
 
 The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable, scans for `GWorld` / `GNames` via AOB patterns with RIP-relative resolution, and walks core Unreal structures (world chain, `GameState` player array, skeletal mesh bones, head/capsule sizing, camera POV) to understand how runtime state is laid out in memory. A transparent DXGI overlay (DirectX 11 + ImGui) renders on top of the game window.
 
-> Work in progress. AOB resolution, pointer chains, background polling, overlay, menu, snaplines, and box ESP are in place. Skeleton / name labels and aimbot remain placeholder UI. Chinese hat ESP exists in code but is not exposed in the menu yet.
+> **v0.0.1** — first public release. External attach, AOB resolution, full UE5 pointer chains, background polling, DXGI overlay, ESP (box, snaplines, name/distance, teammate filtering), and a basic aimbot (FOV filter, smoothing, right-click hold) are included. Skeleton ESP and Chinese hat remain experimental / not menu-exposed.
 
 <br/>
 
@@ -69,10 +69,14 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **Overlay** | Transparent Win32 window, DXGI 11, ImGui render loop | done |
 | **Menu** | ImGui tabs (ESP / Aimbot / Misc), `INSERT` toggle | done |
 | **Box ESP** | 2D bounding box from projected foot/head using `playerSize` | done |
-| **Snaplines ESP** | Lines from screen bottom to projected actor feet | done |
-| **Chinese hat** | RGB cone overlay — implemented, not in menu yet | WIP |
-| **Skeleton / labels** | Menu toggles present, rendering not implemented | planned |
-| **Aimbot** | Menu toggles present, no aim logic yet | planned |
+| **Snaplines ESP** | Lines from screen bottom-center to projected actor feet | done |
+| **Name / distance** | Player name above head, distance in metres below | done |
+| **Team filter** | Hunter / Survivor / Spectator role detection, hide teammates | done |
+| **Enemy box colors** | Optional red tint for non-teammates | done |
+| **Aimbot** | Closest-to-crosshair target, FOV radius, smoothing, RMB hold | done |
+| **Chinese hat** | RGB cone overlay — implemented, unstable, not in menu | WIP |
+| **Skeleton ESP** | Menu toggle present, rendering not implemented | planned |
+| **Flat chams** | Experimental material swap via `writeMemory` — not in menu | WIP |
 
 ---
 
@@ -89,17 +93,16 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **Health / state** | Optional bars or flags when offsets are known |
 | **Chinese hat** | RGB hat above players |
 
-### Aimbot *(maybe)*
+### Aimbot
 
-| Feature | Description |
-|:--------|:------------|
-| **Target selection** | Closest to crosshair, lowest HP, etc. |
-| **Bone aim** | Head / chest / configurable bone index |
-| **FOV limit** | Only acquire targets inside a radius |
-| **Smoothing** | Interpolated aim delta instead of snap |
-| **Visibility check** | Skip actors behind geometry when trace data exists |
-
-> Aimbot is not committed yet — listed as a possible research extension once actor filtering and view matrices are stable.
+| Feature | Description | Status |
+|:--------|:------------|:------:|
+| **Target selection** | Closest enemy to screen centre (skips local player & teammates) | done |
+| **FOV limit** | Configurable radius around crosshair | done |
+| **Smoothing** | Interpolated cursor step per frame | done |
+| **Keybind** | Hold right mouse button (default) while enabled | done |
+| **Bone aim** | Head / chest / configurable bone index | planned |
+| **Visibility check** | Skip actors behind geometry when trace data exists | planned |
 
 ---
 
@@ -112,6 +115,7 @@ flowchart LR
     CM --> O["Overlay"]
     CM --> M["Menu"]
     CM --> E["ESP"]
+    CM --> AB["Aimbot"]
     CM --> G["Globals"]
 
     B --> C["Memory"]
@@ -134,6 +138,8 @@ flowchart LR
     B -->|"background thread"| B
     B -->|"getSnapshot()"| A
     U -->|"WorldToScreen()"| E
+    U -->|"WorldToScreen()"| AB
+    AB -->|"SetCursorPos (RMB)"| N2["OS cursor"]
     O -->|"DX11 + ImGui"| N["Transparent overlay HWND"]
     M --> G
 
@@ -144,7 +150,7 @@ flowchart LR
 
 **Init flow:**
 
-1. `ClassManager` registers `MecchaChameleon`, `Overlay`, `Menu`, and `ESP` as `IManagedClass` instances.
+1. `ClassManager` registers `MecchaChameleon`, `Overlay`, `Menu`, `ESP`, and `Aimbot` as `IManagedClass` instances.
 2. Attach to `PenguinHotel-Win64-Shipping.exe` and read module base/size.
 3. Scan the module image for AOB patterns → resolve `GWorld` (`RipMode::Mov`, dereferenced) and `GNames` (`RipMode::Lea`).
 4. Walk and validate the full pointer chain (world, camera, `GameState`, player meshes).
@@ -167,7 +173,7 @@ Module scan (AOB)
                                     └── RootComponent → RelativeLocation
 ```
 
-**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` (snaplines / box / chinese hat per settings) → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
+**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` → `Aimbot::onAimbot()` → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
 
 ---
 
@@ -198,7 +204,8 @@ MecchaChameleon/                          # repo / solution root
         └── Modules/
             ├── Overlay/                  # transparent DXGI overlay window
             ├── Menu/                     # ImGui menu
-            └── Esp/                      # ESP draw helpers
+            ├── Esp/                      # ESP draw helpers
+            └── Aimbot/                   # cursor-based aim assist
 ```
 
 ---
@@ -253,8 +260,9 @@ If an AOB pattern fails to match after a game update, update the patterns in `of
 | Key | Action |
 |:----|:-------|
 | **INSERT** | Toggle ImGui menu (overlay becomes interactive while open) |
+| **Right mouse button** | Hold while aimbot is enabled to acquire closest target |
 
-Menu tabs: **ESP** (box, skeleton, name/distance, snaplines), **Aimbot** (enabled, FOV, smoothing — UI only), **Misc**.
+Menu tabs: **ESP** (box, skeleton, name, distance, snaplines, hide teammates, enemy colors), **Aimbot** (enabled, FOV limit, smoothing), **Misc**.
 
 ---
 
@@ -286,6 +294,7 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 | `PlayerCameraManager` | `+0x360` | `APlayerController` → camera manager |
 | `CameraInfo` | `+0x1540` | `FMinimalViewInfo` in camera manager |
 | `PlayerArray` | `+0x2C0` | `AGameState` → player state array |
+| `PlayerName` | `+0x340` | `APlayerState` → display name (`FString`) |
 | `Pawn` | `+0x320` | `APlayerState` → possessed pawn |
 | `Mesh` | `+0x418` | `APawn` → skeletal mesh component |
 | `SkeletalMesh` | `+0x578` | `USkeletalMeshComponent` → mesh asset |
@@ -319,16 +328,19 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 **ESP**
 
 - [x] Box ESP
-- [ ] Skeleton ESP
-- [ ] Name / distance labels
+- [x] Name / distance labels
 - [x] Snaplines
+- [x] Team filter & enemy box colors
+- [ ] Skeleton ESP
 - [ ] Chinese hat (code exists, menu toggle pending)
 
-**Aimbot** *(TBD)*
+**Aimbot**
 
-- [ ] Target selection & FOV filter
+- [x] Target selection (closest to crosshair)
+- [x] FOV filter & smoothing
+- [x] Right-click hold keybind
 - [ ] Bone-based aim
-- [ ] Smoothing
+- [ ] Visibility check
 
 ---
 

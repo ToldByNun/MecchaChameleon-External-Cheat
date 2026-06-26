@@ -52,7 +52,6 @@ void Menu::render() {
 
 		if (ImGui::BeginTabItem("Misc")) {
 			ImGui::Text("INSERT - toggle menu");
-			ImGui::Text("Research build - features are placeholders.");
 			ImGui::EndTabItem();
 		}
 

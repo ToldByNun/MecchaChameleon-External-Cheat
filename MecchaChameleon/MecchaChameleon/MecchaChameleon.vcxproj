@@ -152,6 +152,7 @@
     <ClCompile Include="MecchaChameleon\main.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\Memory\Memory.cpp" />
     <ClCompile Include="MecchaChameleon\Manager\Globals\Globals.cpp" />
+    <ClCompile Include="MecchaChameleon\Modules\Aimbot\Aimbot.cpp" />
     <ClCompile Include="MecchaChameleon\Modules\ESP\ESP.cpp" />
     <ClCompile Include="MecchaChameleon\Modules\Menu\Menu.cpp" />
     <ClCompile Include="MecchaChameleon\Modules\Overlay\Overlay.cpp" />
@@ -173,6 +174,7 @@
     <ClInclude Include="MecchaChameleon\Engine\Unreal\Unreal.hpp" />
     <ClInclude Include="MecchaChameleon\Manager\Classmanager\Classmanager.hpp" />
     <ClInclude Include="MecchaChameleon\Manager\Globals\Globals.hpp" />
+    <ClInclude Include="MecchaChameleon\Modules\Aimbot\Aimbot.hpp" />
     <ClInclude Include="MecchaChameleon\Modules\ESP\ESP.hpp" />
     <ClInclude Include="MecchaChameleon\Modules\Menu\Menu.hpp" />
     <ClInclude Include="MecchaChameleon\Modules\Overlay\Overlay.hpp" />

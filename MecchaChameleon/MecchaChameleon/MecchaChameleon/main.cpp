@@ -9,6 +9,7 @@
 #include "Modules/Overlay/Overlay.hpp"
 #include "Modules/Menu/Menu.hpp"
 #include "Modules/ESP/ESP.hpp"
+#include "Modules/Aimbot/Aimbot.hpp"
 
 int main() {
 	ClassManager classManager;
@@ -19,6 +20,7 @@ int main() {
 	globals.mecchaChameleon = classManager.addClass<MecchaChameleon>("mecchaChameleon");
 	globals.menu = classManager.addClass<Menu>("menu");
 	globals.esp = classManager.addClass<ESP>("esp");
+	globals.aimbot = classManager.addClass<Aimbot>("aimbot");
 	globals.overlay = classManager.addClass<Overlay>("overlay");
 
 	if (!classManager.init()) {
@@ -59,8 +61,10 @@ int main() {
 		globals.overlay->beginFrame();
 		globals.menu->render();
 
-		if (!actors.empty())
+		if (!actors.empty()) {
 			globals.esp->renderESP(actors, viewInfo);
+			globals.aimbot->onAimbot(actors, viewInfo);
+		}
 
 		globals.overlay->endFrame();
 

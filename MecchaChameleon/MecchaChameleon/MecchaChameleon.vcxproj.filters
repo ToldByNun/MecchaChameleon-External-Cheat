@@ -57,6 +57,9 @@
     <ClCompile Include="MecchaChameleon\Manager\Globals\Globals.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="MecchaChameleon\Modules\Aimbot\Aimbot.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MecchaChameleon\Engine\Memory\Memory.hpp">
@@ -114,6 +117,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="MecchaChameleon\Manager\Globals\Globals.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MecchaChameleon\Modules\Aimbot\Aimbot.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

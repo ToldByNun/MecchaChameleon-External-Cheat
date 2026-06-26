@@ -5,6 +5,7 @@ class MecchaChameleon;
 class Overlay;
 class Menu;
 class ESP;
+class Aimbot;
 
 struct EspSettings {
     bool box = false;
@@ -38,6 +39,7 @@ struct Globals {
     Overlay* overlay = nullptr;
     Menu* menu = nullptr;
     ESP* esp = nullptr;
+    Aimbot* aimbot = nullptr;
     AppSettings settings{};
 };
 
