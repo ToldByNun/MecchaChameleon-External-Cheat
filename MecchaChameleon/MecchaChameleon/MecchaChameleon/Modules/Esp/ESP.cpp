@@ -38,7 +38,7 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	for (const TrackedActor& actor : actors) {
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
-		bool bVisibleBottom = unreal.WorldToScreen(
+		bool bVisibleBottom = this->unreal.WorldToScreen(
 			viewInfo,
 			actor.location - FVector(0, 0, actor.playerSize),
 			screenBottom,
@@ -46,7 +46,7 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			displaySize.y
 		);
 
-		bool bVisibleTop = unreal.WorldToScreen(
+		bool bVisibleTop = this->unreal.WorldToScreen(
 			viewInfo,
 			actor.location + FVector(0, 0, actor.playerSize),
 			screenTop,
@@ -115,7 +115,7 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 	for (const TrackedActor& actor : actors) {
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
-		bool bVisibleTop = unreal.WorldToScreen(
+		bool bVisibleTop = this->unreal.WorldToScreen(
 			viewInfo,
 			actor.location + FVector(0, 0, actor.playerSize),
 			screenTop,
@@ -194,7 +194,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
 		FVector2D screenPos;
-		if (!unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
+		if (!this->unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
 			behindCamera++;
 			continue;
 		}
@@ -250,7 +250,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 			);
 
 			FVector2D screenEdge;
-			if (!unreal.WorldToScreen(viewInfo, edgeWorld, screenEdge, displaySize.x, displaySize.y)) {
+			if (!this->unreal.WorldToScreen(viewInfo, edgeWorld, screenEdge, displaySize.x, displaySize.y)) {
 				hasLastEdge = false;
 				continue;
 			}
