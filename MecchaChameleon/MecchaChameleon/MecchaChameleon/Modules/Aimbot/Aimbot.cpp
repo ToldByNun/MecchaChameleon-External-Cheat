@@ -6,15 +6,19 @@ void Aimbot::onAimbot(const std::vector<TrackedActor>& actors, const FMinimalVie
 	if (!globals.settings.aimbot.enabled) return;
 
 	FVector2D bestActorHeadPosition2D = this->getClosestTargetToCursor(actors, viewInfo);
+	FVector2D step2D = this->applyAimSmoothing(bestActorHeadPosition2D);
 
-	if (bestActorHeadPosition2D.x == 0 && bestActorHeadPosition2D.y == 0) return;
+	if (step2D.x == 0 && step2D.y == 0) return;
 
-	if (GetAsyncKeyState(VK_RBUTTON)) {
-		this->applyAimSmoothing(bestActorHeadPosition2D);
+	if (GetAsyncKeyState(globals.settings.aimbot.keybind)) {
+		SetCursorPos(
+			static_cast<int>(bestActorHeadPosition2D.x + step2D.x),
+			static_cast<int>(bestActorHeadPosition2D.y + step2D.y)
+		);
 	}
 }
 
-bool Aimbot::isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo, const float& FoV) {
+bool Aimbot::isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo) {
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	const ImVec2 screenCenter(displaySize.x / 2.0f, displaySize.y / 2.0f);
 	FVector2D screenPos;
@@ -34,7 +38,7 @@ bool Aimbot::isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo
 		screenPos.y - screenCenter.y
 	);
 
-	return distance <= 90.0f;
+	return distance <= globals.settings.aimbot.fov;
 }
 
 FVector2D Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -45,7 +49,7 @@ FVector2D Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& acto
 	float closestDistance = FLT_MAX;
 
 	for (const TrackedActor& actor : actors) {
-		if (!this->isInFoV(actor, viewInfo, globals.settings.aimbot.fov) || actor.isLocalPlayer || actor.sameTeam) continue;
+		if (!this->isInFoV(actor, viewInfo) || actor.isLocalPlayer || actor.sameTeam) continue;
 
 		FVector2D currentEnemyScrenPos;
 
@@ -75,16 +79,17 @@ FVector2D Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& acto
 
 FVector2D Aimbot::applyAimSmoothing(const FVector2D& headPosition2D) {
 	POINT currentMousePosition;
-	if (!GetCursorPos(&currentMousePosition)) return;
+	if (!GetCursorPos(&currentMousePosition)) return { 0, 0 };
 
-	float deltaX = headPosition2D.x - currentMousePosition.x;
-	float deltaY = headPosition2D.y - currentMousePosition.y;
+	FVector2D delta = {
+		headPosition2D.x - currentMousePosition.x,
+		headPosition2D.y - currentMousePosition.y
+	};
 
-	float stepX = deltaX / globals.settings.aimbot.smooth;
-	float stepY = deltaY / globals.settings.aimbot.smooth;
+	FVector2D step = {
+		delta.x / globals.settings.aimbot.smooth,
+		delta.y / globals.settings.aimbot.smooth
+	};
 
-	SetCursorPos(
-		static_cast<int>(currentMousePosition.x + stepX),
-		static_cast<int>(currentMousePosition.y + stepY)
-	);
+	return step;
 }

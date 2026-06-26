@@ -14,7 +14,7 @@ public:
 	void onAimbot(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 
 private:
-	bool isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo, const float& FoV);
+	bool isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo);
 	FVector2D getClosestTargetToCursor(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 
 private:
