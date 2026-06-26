@@ -23,6 +23,7 @@ struct AimbotSettings {
     bool smoothing = false;
     float fov = 90.f;
     float smooth = 5.f;
+    int keybind = 2; // WinUser.h:465 - RightClick
 };
 
 struct AppSettings {
