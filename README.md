@@ -15,9 +15,9 @@
 
 <div align="center">
 
-<img src="Assets/preview.png" alt="MecchaChameleon overlay preview — box ESP on a player in-game" width="800"/>
+<img src="Assets/preview.png" alt="v0.0.2 preview" width="300"/>
 
-<sub>Box ESP overlay on the game window · ImGui menu via <b>INSERT</b></sub>
+<sub>Preview of the next version · ImGui menu via <b>INSERT</b></sub>
 
 </div>
 

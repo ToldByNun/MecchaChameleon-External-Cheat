@@ -141,6 +141,13 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\FooterBar.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\MainGui.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Presets.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Section.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Slider.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Toggle.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\TopBar.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_draw.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\imgui_impl_dx11.cpp" />
@@ -159,6 +166,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MecchaChameleon\Engine\helpers.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\FooterBar.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\MainGui.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Presets.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Section.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Slider.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Toggle.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\TopBar.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\imconfig.h" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui.h" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\imgui_impl_dx11.h" />

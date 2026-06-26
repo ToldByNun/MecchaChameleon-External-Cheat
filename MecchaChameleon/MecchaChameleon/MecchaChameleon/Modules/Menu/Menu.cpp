@@ -2,10 +2,47 @@
 
 #include "../../Manager/Globals/Globals.hpp"
 #include "../../Engine/ImGui/imgui.h"
+#include "../../Engine/ImGui/Custom/MainGui.hpp"
+#include "../../Engine/ImGui/Custom/TopBar.hpp"
+#include "../../Engine/ImGui/Custom/FooterBar.hpp"
+#include "../../Engine/ImGui/Custom/Section.hpp"
+#include "../../Engine/ImGui/Custom/Toggle.hpp"
+#include "../../Engine/ImGui/Custom/Slider.hpp"
+#include "../../Engine/ImGui/Custom/Presets.hpp"
+
+static int activeCategory = 0;
+
+static const char* categories[] = { "Combat", "Visuals" };
 
 void Menu::handleInput() {
 	if (GetAsyncKeyState(VK_INSERT) & 1)
 		globals.settings.menuOpen = !globals.settings.menuOpen;
+}
+
+static void renderEspSettings() {
+	Custom::Toggle("Box ESP", &globals.settings.esp.box);
+	Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
+	Custom::Toggle("Name", &globals.settings.esp.name);
+	Custom::Toggle("Distance", &globals.settings.esp.distance);
+	Custom::Toggle("Snaplines", &globals.settings.esp.snaplines);
+}
+
+static void renderEspOptions() {
+	Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);
+	Custom::Toggle("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
+}
+
+static void renderAimbotSettings() {
+	Custom::Toggle("Enabled", &globals.settings.aimbot.enabled);
+	Custom::Toggle("FOV limit", &globals.settings.aimbot.fovLimit);
+	Custom::Toggle("Smoothing", &globals.settings.aimbot.smoothing);
+}
+
+static void renderAimbotOptions() {
+	if (globals.settings.aimbot.fovLimit)
+		Custom::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
+	if (globals.settings.aimbot.smoothing)
+		Custom::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
 }
 
 void Menu::render() {
@@ -20,43 +57,56 @@ void Menu::render() {
 		return;
 	}
 
+	const Custom::MainGuiPreset& mainPreset = Custom::g_presets.mainGui;
+	const Custom::TopBarPreset& topPreset = Custom::g_presets.topBar;
+	const Custom::FooterBarPreset& footerPreset = Custom::g_presets.footer;
+
 	ImGui::SetNextWindowPos(
-		ImVec2(displaySize.x * 0.5f - 210.f, displaySize.y * 0.5f - 180.f),
+		ImVec2(
+			displaySize.x * 0.5f - mainPreset.defaultSize.x * 0.5f,
+			displaySize.y * 0.5f - mainPreset.defaultSize.y * 0.5f
+		),
 		ImGuiCond_FirstUseEver
 	);
-	ImGui::SetNextWindowSize(ImVec2(420.f, 360.f), ImGuiCond_FirstUseEver);
-	ImGui::Begin("MecchaChameleon", &globals.settings.menuOpen, ImGuiWindowFlags_NoCollapse);
+	ImGui::SetNextWindowSize(mainPreset.defaultSize, ImGuiCond_FirstUseEver);
 
-	if (ImGui::BeginTabBar("MainTabs")) {
-		if (ImGui::BeginTabItem("ESP")) {
-			ImGui::Checkbox("Box ESP", &globals.settings.esp.box);
-			ImGui::Checkbox("Skeleton ESP", &globals.settings.esp.skeleton);
-			ImGui::Checkbox("Name", &globals.settings.esp.name);
-			ImGui::Checkbox("Distance", &globals.settings.esp.distance);
-			ImGui::Checkbox("Snaplines", &globals.settings.esp.snaplines);
-			ImGui::Checkbox("Hide Teammates", &globals.settings.esp.onlyEnemies);
-			ImGui::Checkbox("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
-			ImGui::EndTabItem();
-		}
+	if (!Custom::BeginMainGui("MecchaChameleon", &globals.settings.menuOpen, mainPreset))
+		return;
 
-		if (ImGui::BeginTabItem("Aimbot")) {
-			ImGui::Checkbox("Enabled", &globals.settings.aimbot.enabled);
-			ImGui::Checkbox("FOV limit", &globals.settings.aimbot.fovLimit);
-			if (globals.settings.aimbot.fovLimit)
-				ImGui::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
-			ImGui::Checkbox("Smoothing", &globals.settings.aimbot.smoothing);
-			if (globals.settings.aimbot.smoothing)
-				ImGui::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
-			ImGui::EndTabItem();
-		}
+	Custom::TopBar("MecchaChameleon", categories, 2, &activeCategory, topPreset);
 
-		if (ImGui::BeginTabItem("Misc")) {
-			ImGui::Text("INSERT - toggle menu");
-			ImGui::EndTabItem();
-		}
+	const float contentHeight = Custom::GetContentHeight(topPreset.height, footerPreset.height);
+	const float contentWidth = ImGui::GetWindowWidth() - mainPreset.padding.x * 2.f;
+	ImGui::SetCursorPos(ImVec2(mainPreset.padding.x, topPreset.height));
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.f, 0.f, 0.f, 0.f));
+	ImGui::BeginChild("Content", ImVec2(contentWidth, contentHeight), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
 
-		ImGui::EndTabBar();
+	const float availHeight = ImGui::GetContentRegionAvail().y;
+	const float sectionMargin = 9.f;
+	const float sectionHeight = availHeight - sectionMargin * 2.f;
+	Custom::BeginSectionDualLayout(sectionHeight);
+
+	if (Custom::BeginSectionDualLeft(activeCategory == 0 ? "Aimbot" : "ESP")) {
+		if (activeCategory == 0)
+			renderAimbotSettings();
+		else
+			renderEspSettings();
 	}
+	Custom::EndSectionDualLeft();
 
-	ImGui::End();
+	if (Custom::BeginSectionDualRight("Options")) {
+		if (activeCategory == 0)
+			renderAimbotOptions();
+		else
+			renderEspOptions();
+	}
+	Custom::EndSectionDualRight();
+
+	Custom::EndSectionDualLayout();
+
+	ImGui::EndChild();
+	ImGui::PopStyleColor();
+
+	Custom::FooterBar("0.0.2", footerPreset);
+	Custom::EndMainGui();
 }
