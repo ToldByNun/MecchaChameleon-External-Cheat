@@ -15,7 +15,7 @@
 
 <div align="center">
 
-<img src="Assets/preview.png" alt="v0.0.2 preview" width="300"/>
+<img src="Assets/preview.png" alt="v0.0.2 preview" width="600"/>
 
 <sub>Preview of the next version · ImGui menu via <b>INSERT</b></sub>
 
