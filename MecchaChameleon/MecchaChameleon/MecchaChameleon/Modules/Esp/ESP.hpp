@@ -9,7 +9,8 @@
 
 enum LabelType {
 	NAME,
-	DISTANCE
+	DISTANCE,
+	NAMEDISTANCE
 };
 
 class ESP : public IManagedClass {

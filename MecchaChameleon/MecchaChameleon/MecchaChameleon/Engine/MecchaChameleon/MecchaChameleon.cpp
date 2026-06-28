@@ -6,28 +6,6 @@
 #include <chrono>
 #include <thread>
 
-
-/*HeadPosition class=SphereComponent [0x1E685A64C90]
-  +0xA8 -> 0x1E6A58E7160 cLeon_game class=World
-  cLeon_game class=World [0x1E6A58E7160]
-  +0xC8 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
-  BodyCapsule class=CapsuleComponent [0x1E594D0A390]
-  +0x618 -> 0x1E6A58E7160 cLeon_game class=World
-  +0x720 -> 0x1E69F56E410 Default Movement Mixer class=MovementMixer
-  Default Movement Mixer class=MovementMixer [0x1E69F56E410]
-  +0x760 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
-  +0x768 -> 0x1E594D0A390 BodyCapsule class=CapsuleComponent
-  +0x770 -> 0x1E68838F010 Mesh class=SkeletalMeshComponent
-  Mesh class=SkeletalMeshComponent [0x1E68838F010]
-  +0x940 -> 0x1E689EB32B0 BackendLiaisonComponent class=MoverNetworkPhysicsLiaisonComponent
-  BackendLiaisonComponent class=MoverNetworkPhysicsLiaisonComponent [0x1E689EB32B0]
-  +0x978 -> 0x1E685A65200 ExtendedPhysicsCharacterMoverComponent class=ExtendedPhysicsCharacterMoverComponent_C
-  ExtendedPhysicsCharacterMoverComponent class=ExtendedPhysicsCharacterMoverComponent_C [0x1E685A65200]
-  +0x988 -> 0x1E5D6308170 MoverStateMachine class=MovementModeStateMachine
-  MoverStateMachine class=MovementModeStateMachine [0x1E5D6308170]
-  +0x990 -> 0x1E67403A380 MoverBlackboard class=MoverBlackboard
-  MoverBlackboard class=MoverBlackboard [0x1E67403A380]*/
-
 MecchaChameleon::~MecchaChameleon() {
 	stopBackgroundUpdate();
 }
@@ -266,7 +244,7 @@ bool MecchaChameleon::refresh() {
 
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
 		if (mesh) {
-			this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
+			//this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
 			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::BoneSpaceTransforms);
 			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
 		}

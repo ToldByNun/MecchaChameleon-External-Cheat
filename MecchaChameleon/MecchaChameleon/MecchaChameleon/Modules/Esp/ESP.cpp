@@ -17,11 +17,13 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
 	
+	// horrible code but im to lazy to make it right
 	if (globals.settings.esp.name)
 		this->renderNameDistance(actors, viewInfo, LabelType::NAME);
-
-	if (globals.settings.esp.distance)
+	else if (globals.settings.esp.distance)
 		this->renderNameDistance(actors, viewInfo, LabelType::DISTANCE);
+	else if (globals.settings.esp.distance && globals.settings.esp.name)
+		this->renderNameDistance(actors, viewInfo, LabelType::NAMEDISTANCE);
 
 	if (globals.settings.esp.snaplines)
 		this->renderSnaplines(actors, viewInfo);
@@ -143,7 +145,7 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 		if (type == LabelType::DISTANCE) {
 			textPos = ImVec2(
 				screenTop.x - (textSize.x * 0.5f),
-				screenTop.y + actor.playerSize * 0.35f
+				screenTop.y - textSize.y - 4.0f
 			);
 
 			FVector localLocation = viewInfo.Location;
@@ -162,6 +164,30 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 			double distance = std::sqrt(dx * dx + dy * dy + dz * dz) / 100.0;
 
 			text = std::to_string(static_cast<int>(distance)) + "m";
+		}
+
+		if (type == LabelType::NAMEDISTANCE) {
+			textPos = ImVec2(
+				screenTop.x - (textSize.x * 0.5f),
+				screenTop.y - textSize.y - 4.0f
+			);
+
+			FVector localLocation = viewInfo.Location;
+
+			for (const TrackedActor& localActor : actors) {
+				if (localActor.isLocalPlayer) {
+					localLocation = localActor.location;
+					break;
+				}
+			}
+
+			double dx = actor.location.x - localLocation.x;
+			double dy = actor.location.y - localLocation.y;
+			double dz = actor.location.z - localLocation.z;
+
+			double distance = std::sqrt(dx * dx + dy * dy + dz * dz) / 100.0;
+
+			text = actor.playerName + " / " + std::to_string(static_cast<int>(distance)) + "m";
 		}
 
 		if (text.empty()) continue;
