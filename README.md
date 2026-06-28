@@ -4,7 +4,7 @@
 
 ![C++](https://img.shields.io/badge/C++-20-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Version](https://img.shields.io/badge/version-v0.0.1-green)
+![Version](https://img.shields.io/badge/version-v0.0.2-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine-black)
 
 </div>
@@ -15,9 +15,9 @@
 
 <div align="center">
 
-<img src="Assets/preview.png" alt="v0.0.2 preview" width="600"/>
+<img src="Assets/preview.png" alt="MecchaChameleon v0.0.2 — custom ImGui menu with Combat and Visuals categories" width="600"/>
 
-<sub>Preview of the next version · ImGui menu via <b>INSERT</b></sub>
+<sub>Custom ImGui menu · <b>Combat</b> / <b>Visuals</b> categories · toggle with <b>INSERT</b></sub>
 
 </div>
 
@@ -29,7 +29,7 @@ External cheat for **MecchaChameleon** (UE5) — built for **memory research and
 
 The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable, scans for `GWorld` / `GNames` via AOB patterns with RIP-relative resolution, and walks core Unreal structures (world chain, `GameState` player array, skeletal mesh bones, head/capsule sizing, camera POV) to understand how runtime state is laid out in memory. A transparent DXGI overlay (DirectX 11 + ImGui) renders on top of the game window.
 
-> **v0.0.1** — first public release. External attach, AOB resolution, full UE5 pointer chains, background polling, DXGI overlay, ESP (box, snaplines, name/distance, teammate filtering), and a basic aimbot (FOV filter, smoothing, right-click hold) are included. Skeleton ESP and Chinese hat remain experimental / not menu-exposed.
+> **v0.0.2** — custom ImGui UI (Combat / Visuals categories, dual-section layout, themed toggles & sliders), world-pointer monitoring with automatic chain re-resolution on map changes, combined name+distance ESP labels, and aimbot wiring fixes. Skeleton ESP and Chinese hat remain experimental / not menu-exposed.
 
 <br/>
 
@@ -67,10 +67,11 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **Projection** | `WorldToScreen` (`FMinimalViewInfo → FVector2D`) | done |
 | **Background poll** | Mutex-protected actor/camera snapshot on a worker thread | done |
 | **Overlay** | Transparent Win32 window, DXGI 11, ImGui render loop | done |
-| **Menu** | ImGui tabs (ESP / Aimbot / Misc), `INSERT` toggle | done |
+| **World re-resolution** | Monitors `GWorld` address vs value; re-walks chain on world change | done |
+| **Menu** | Custom ImGui widgets, **Combat** / **Visuals** categories, dual-section layout | done |
 | **Box ESP** | 2D bounding box from projected foot/head using `playerSize` | done |
 | **Snaplines ESP** | Lines from screen bottom-center to projected actor feet | done |
-| **Name / distance** | Player name above head, distance in metres below | done |
+| **Name / distance** | Player name, distance in metres, or combined `name / Xm` label | done |
 | **Team filter** | Hunter / Survivor / Spectator role detection, hide teammates | done |
 | **Enemy box colors** | Optional red tint for non-teammates | done |
 | **Aimbot** | Closest-to-crosshair target, FOV radius, smoothing, RMB hold | done |
@@ -88,7 +89,7 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 |:--------|:------------|
 | **Box ESP** | 2D bounding boxes around actors via world-to-screen |
 | **Skeleton ESP** | Bone chain overlay for humanoid meshes |
-| **Name / distance** | Actor class name and distance from local player |
+| **Name / distance** | Actor name, distance, or combined label |
 | **Snaplines** | Lines from screen center or bottom to target |
 | **Health / state** | Optional bars or flags when offsets are known |
 | **Chinese hat** | RGB hat above players |
@@ -126,7 +127,7 @@ flowchart LR
     C -->|"resolveAob(RipMode)"| F
     C -->|"readMemory&lt;T&gt;()"| F
 
-    B -->|"init: AOB scan"| GW["GWorld / GNames"]
+    C -->|"init: AOB scan"| GW["GWorld / GNames"]
     GW --> H["UWorld chain"]
     H --> I["GameState → PlayerArray"]
     I --> J["Pawn → RootComponent → FVector"]
@@ -154,6 +155,7 @@ flowchart LR
 2. Attach to `PenguinHotel-Win64-Shipping.exe` and read module base/size.
 3. Scan the module image for AOB patterns → resolve `GWorld` (`RipMode::Mov`, dereferenced) and `GNames` (`RipMode::Lea`).
 4. Walk and validate the full pointer chain (world, camera, `GameState`, player meshes).
+5. Background thread calls `updateWorldPointer()` each tick — if the `UWorld*` value at the resolved `GWorld` address changes (e.g. map load), the chain is cleared and re-resolved automatically.
 
 **Pointer chains:**
 
@@ -201,6 +203,7 @@ MecchaChameleon/                          # repo / solution root
         │   ├── MecchaChameleon/          # core module (init, update, snapshot)
         │   ├── Unreal/                   # WorldToScreen
         │   └── ImGui/                    # vendored Dear ImGui + DX11/Win32 backends
+        │       └── Custom/               # themed widgets (MainGui, TopBar, Toggle, Slider, …)
         └── Modules/
             ├── Overlay/                  # transparent DXGI overlay window
             ├── Menu/                     # ImGui menu
@@ -262,7 +265,7 @@ If an AOB pattern fails to match after a game update, update the patterns in `of
 | **INSERT** | Toggle ImGui menu (overlay becomes interactive while open) |
 | **Right mouse button** | Hold while aimbot is enabled to acquire closest target |
 
-Menu tabs: **ESP** (box, skeleton, name, distance, snaplines, hide teammates, enemy colors), **Aimbot** (enabled, FOV limit, smoothing), **Misc**.
+Menu categories: **Combat** (aimbot toggles + FOV/smooth sliders), **Visuals** (ESP toggles + teammate/enemy color options). Footer shows current version.
 
 ---
 
@@ -322,8 +325,9 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 - [x] World-to-screen projection math
 - [x] Live `FMinimalViewInfo` extraction
 - [x] Background update thread + thread-safe snapshot
+- [x] World-pointer monitoring + chain re-resolution
 - [x] Overlay render loop (DirectX 11 / ImGui)
-- [x] ImGui menu & shared settings
+- [x] Custom ImGui menu & shared settings
 
 **ESP**
 
