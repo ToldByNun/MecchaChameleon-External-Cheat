@@ -13,6 +13,7 @@ MecchaChameleon::~MecchaChameleon() {
 void MecchaChameleon::deinit() {
 	stopBackgroundUpdate();
 	chainResolved = false;
+	gWorldAddress = 0;
 	world = 0;
 	names = 0;
 	persistentLevel = 0;
@@ -60,11 +61,14 @@ bool MecchaChameleon::init() {
 
 	if (!this->check(memory.baseAddress, "BaseAddress")) return false;
 
-	this->world = this->memory.resolveAob(
+	AobResult worldResult = this->memory.resolveAob(
 		Offsets::AOBs::GWorldAOB,
 		Offsets::AOBs::GWorldInstructionOffset,
 		RipMode::Mov
-	).value; Offsets::GWorld = this->world;
+	);
+	this->gWorldAddress = worldResult.target;
+	this->world = worldResult.value;
+	Offsets::GWorld = this->gWorldAddress;
 
 	this->names = this->memory.resolveAob(
 		Offsets::AOBs::GNamesAOB,
@@ -74,6 +78,7 @@ bool MecchaChameleon::init() {
 
 	if (!resolveChain()) return false;
 
+	validatePlayerArray();
 	chainResolved = true;
 	return true;
 }
@@ -157,12 +162,54 @@ bool MecchaChameleon::resolveChain() {
 	if (!resolvePlayerController()) return false;
 	if (!resolveCameraManager()) return false;
 	if (!resolveGameState()) return false;
-	if (!validatePlayerArray()) return false;
+	return true;
+}
+
+void MecchaChameleon::clearSnapshot() {
+	std::lock_guard<std::mutex> lock(this->dataMutex);
+	this->actors.clear();
+	this->viewInfo = {};
+}
+
+bool MecchaChameleon::updateWorldPointer() {
+	if (!this->gWorldAddress)
+		return false;
+
+	uintptr_t currentWorld = this->memory.readMemory<uintptr_t>(this->gWorldAddress);
+	if (!currentWorld)
+		return false;
+
+	if (currentWorld != this->world) {
+		this->world = currentWorld;
+		this->chainResolved = false;
+		this->persistentLevel = 0;
+		this->gameInstance = 0;
+		this->localPlayer = 0;
+		this->playerController = 0;
+		this->cameraManager = 0;
+		this->gameState = 0;
+		clearSnapshot();
+	}
+
 	return true;
 }
 
 void MecchaChameleon::update() {
-	refresh();
+	if (!updateWorldPointer()) {
+		this->chainResolved = false;
+		clearSnapshot();
+		return;
+	}
+
+	if (!this->chainResolved && !resolveChain()) {
+		clearSnapshot();
+		return;
+	}
+
+	this->chainResolved = true;
+
+	if (!refresh())
+		this->chainResolved = resolveChain() && refresh();
 }
 
 // Testing. nothing serious yet
@@ -220,7 +267,12 @@ bool MecchaChameleon::refresh() {
 	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo);
 
 	TArray playerArray = this->memory.readMemory<TArray>(this->gameState + Offsets::SWorld::SGameState::PlayerArray);
-	if (!playerArray.data || playerArray.count <= 0 || playerArray.count > 1000000) return false;
+	if (!playerArray.data || playerArray.count <= 0 || playerArray.count > 1000000) {
+		std::lock_guard<std::mutex> lock(this->dataMutex);
+		this->actors.clear();
+		this->viewInfo = newViewInfo;
+		return false;
+	}
 
 	newActors.reserve(playerArray.count);
 

@@ -52,6 +52,7 @@ public:
     void applyFlatChams(uintptr_t pawn);
     bool resolveChain();
 private:
+    uintptr_t gWorldAddress = 0;
     uintptr_t world = 0;
     uintptr_t names = 0;
     uintptr_t persistentLevel = 0;
@@ -90,6 +91,8 @@ private:
 	bool resolveGameState();
 	bool validatePlayerArray();
     bool refresh();
+    void clearSnapshot();
+    bool updateWorldPointer();
 
     template <typename T, typename = void> struct is_tarray : std::false_type {};
     template <typename T> struct is_tarray<T, std::void_t<decltype(std::declval<T>().data), decltype(std::declval<T>().count)>> : std::true_type {};
