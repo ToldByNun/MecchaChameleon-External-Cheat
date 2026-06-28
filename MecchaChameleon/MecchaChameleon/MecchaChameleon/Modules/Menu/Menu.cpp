@@ -20,6 +20,7 @@ void Menu::handleInput() {
 }
 
 static void renderEspSettings() {
+	Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
 	Custom::Toggle("Box ESP", &globals.settings.esp.box);
 	Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
 	Custom::Toggle("Name", &globals.settings.esp.name);
@@ -28,6 +29,8 @@ static void renderEspSettings() {
 }
 
 static void renderEspOptions() {
+	if (globals.settings.esp.fovCircle)
+		Custom::SliderFloat("FoV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
 	Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);
 	Custom::Toggle("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
 }

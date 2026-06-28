@@ -61,10 +61,10 @@ int main() {
 		globals.overlay->beginFrame();
 		globals.menu->render();
 
-		if (!actors.empty()) {
-			globals.esp->renderESP(actors, viewInfo);
+		globals.esp->renderESP(actors, viewInfo);
+
+		if (!actors.empty())
 			globals.aimbot->onAimbot(actors, viewInfo);
-		}
 
 		globals.overlay->endFrame();
 

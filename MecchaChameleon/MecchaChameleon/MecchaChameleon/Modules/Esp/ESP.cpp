@@ -30,7 +30,7 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	if (globals.settings.esp.chineseHat)
 		this->renderChineseHat(actors, viewInfo);
 
-	if (globals.settings.esp.fovCircle && globals.settings.aimbot.fovLimit)
+	if (globals.settings.esp.fovCircle)
 		this->renderFoV(globals.settings.aimbot.fov);
 }
 
@@ -263,7 +263,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 	}
 }
 
-void ESP::renderFoV(const float& fov) {
+void ESP::renderFoV(float fov) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
