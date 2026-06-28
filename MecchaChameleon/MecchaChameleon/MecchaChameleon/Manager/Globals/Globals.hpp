@@ -14,6 +14,7 @@ struct EspSettings {
     bool distance = false;
     bool snaplines = false;
     bool chineseHat = false;
+    bool fovCircle = false;
     bool onlyEnemies = false;
     bool isTeammateColorEnabled = false;
 };

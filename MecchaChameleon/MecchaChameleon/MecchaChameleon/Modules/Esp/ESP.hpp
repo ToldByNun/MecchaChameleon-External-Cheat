@@ -22,7 +22,7 @@ public:
 	void renderNameDistance(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo, LabelType type);
 	void renderSnaplines(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
 	void renderChineseHat(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo);
-
+	void renderFoV(const float& fov);
 };
 
 #endif // ESP_HPP

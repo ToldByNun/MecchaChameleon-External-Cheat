@@ -315,7 +315,8 @@ bool MecchaChameleon::refresh() {
 				playerSize,
 				playerName,
 				localRole == playerRole && playerRole != PlayerRole::UNKNOWN,
-				pawn == localPawn 
+				pawn == localPawn,
+				pawn
 			}
 		);
 	}

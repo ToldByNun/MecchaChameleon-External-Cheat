@@ -17,19 +17,21 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
 	
-	// horrible code but im to lazy to make it right
-	if (globals.settings.esp.name)
+	if (globals.settings.esp.name && globals.settings.esp.distance)
+		this->renderNameDistance(actors, viewInfo, LabelType::NAMEDISTANCE);
+	else if (globals.settings.esp.name)
 		this->renderNameDistance(actors, viewInfo, LabelType::NAME);
 	else if (globals.settings.esp.distance)
 		this->renderNameDistance(actors, viewInfo, LabelType::DISTANCE);
-	else if (globals.settings.esp.distance && globals.settings.esp.name)
-		this->renderNameDistance(actors, viewInfo, LabelType::NAMEDISTANCE);
 
 	if (globals.settings.esp.snaplines)
 		this->renderSnaplines(actors, viewInfo);
 
 	if (globals.settings.esp.chineseHat)
 		this->renderChineseHat(actors, viewInfo);
+
+	if (globals.settings.esp.fovCircle && globals.settings.aimbot.fovLimit)
+		this->renderFoV(globals.settings.aimbot.fov);
 }
 
 void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -66,10 +68,10 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 		ImVec2 bottomRight = ImVec2(centerX + width2D * 0.5f, screenBottom.y);
 
 		drawList->AddRect(
-			ImVec2(topLeft.x - 1.0f, topLeft.y - 1.0f),
-			ImVec2(bottomRight.x + 1.0f, bottomRight.y + 1.0f),
+			ImVec2(topLeft.x, topLeft.y),
+			ImVec2(bottomRight.x, bottomRight.y),
 			IM_COL32(0, 0, 0, 255),
-			0.0f, ImDrawFlags_None, 1.0f
+			0.0f, ImDrawFlags_None, 4.0f
 		);
 
 		// very scuffed but to simplify it:
@@ -88,13 +90,6 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			),
 			0.0f, ImDrawFlags_None, 2.0f
 		);
-
-		drawList->AddRect(
-			ImVec2(topLeft.x + 1.0f, topLeft.y + 1.0f),
-			ImVec2(bottomRight.x - 1.0f, bottomRight.y - 1.0f),
-			IM_COL32(0, 0, 0, 255),
-			0.0f, ImDrawFlags_None, 1.0f
-		);
 	}
 }
 
@@ -102,17 +97,6 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	FVector2D screenTop;
-
-	bool hasLocalPlayer = false;
-	FVector localLocation{};
-
-	for (const TrackedActor& actor : actors) {
-		if (actor.isLocalPlayer) {
-			localLocation = actor.location;
-			hasLocalPlayer = true;
-			break;
-		}
-	}
 
 	for (const TrackedActor& actor : actors) {
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
@@ -129,61 +113,40 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 
 		std::string text;
 
-		ImVec2 textSize = ImGui::CalcTextSize(text.c_str());
-
-		ImVec2 textPos;
-
 		if (type == LabelType::NAME) {
-			textPos = ImVec2(
-				screenTop.x - (textSize.x * 0.5f),
-				screenTop.y - textSize.y - 4.0f
-			);
-
 			text = actor.playerName;
 		}
-
-		if (type == LabelType::DISTANCE) {
-			textPos = ImVec2(
-				screenTop.x - (textSize.x * 0.5f),
-				screenTop.y - textSize.y - 4.0f
-			);
-
-			FVector localLocation = viewInfo.Location;
+		else if (type == LabelType::DISTANCE) {
+			FVector distanceFrom = viewInfo.Location;
 
 			for (const TrackedActor& localActor : actors) {
 				if (localActor.isLocalPlayer) {
-					localLocation = localActor.location;
+					distanceFrom = localActor.location;
 					break;
 				}
 			}
 
-			double dx = actor.location.x - localLocation.x;
-			double dy = actor.location.y - localLocation.y;
-			double dz = actor.location.z - localLocation.z;
+			double dx = actor.location.x - distanceFrom.x;
+			double dy = actor.location.y - distanceFrom.y;
+			double dz = actor.location.z - distanceFrom.z;
 
 			double distance = std::sqrt(dx * dx + dy * dy + dz * dz) / 100.0;
 
 			text = std::to_string(static_cast<int>(distance)) + "m";
 		}
-
-		if (type == LabelType::NAMEDISTANCE) {
-			textPos = ImVec2(
-				screenTop.x - (textSize.x * 0.5f),
-				screenTop.y - textSize.y - 4.0f
-			);
-
-			FVector localLocation = viewInfo.Location;
+		else if (type == LabelType::NAMEDISTANCE) {
+			FVector distanceFrom = viewInfo.Location;
 
 			for (const TrackedActor& localActor : actors) {
 				if (localActor.isLocalPlayer) {
-					localLocation = localActor.location;
+					distanceFrom = localActor.location;
 					break;
 				}
 			}
 
-			double dx = actor.location.x - localLocation.x;
-			double dy = actor.location.y - localLocation.y;
-			double dz = actor.location.z - localLocation.z;
+			double dx = actor.location.x - distanceFrom.x;
+			double dy = actor.location.y - distanceFrom.y;
+			double dz = actor.location.z - distanceFrom.z;
 
 			double distance = std::sqrt(dx * dx + dy * dy + dz * dz) / 100.0;
 
@@ -191,6 +154,12 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 		}
 
 		if (text.empty()) continue;
+
+		ImVec2 textSize = ImGui::CalcTextSize(text.c_str());
+		ImVec2 textPos = ImVec2(
+			screenTop.x - (textSize.x * 0.5f),
+			screenTop.y - textSize.y - 4.0f
+		);
 
 		drawList->AddText(ImVec2(textPos.x + 1.0f, textPos.y + 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
 		drawList->AddText(ImVec2(textPos.x - 1.0f, textPos.y - 1.0f), IM_COL32(0, 0, 0, 255), text.c_str());
@@ -292,4 +261,14 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 			hasLastEdge = true;
 		}
 	}
+}
+
+void ESP::renderFoV(const float& fov) {
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+
+	const ImVec2 displayMiddle = ImVec2(displaySize.x / 2, displaySize.y / 2);
+
+	drawList->AddCircle(displayMiddle, fov, ImColor(0, 0, 0, 255), 64, 3.0f);
+	drawList->AddCircle(displayMiddle, fov, ImColor(255, 255, 255, 255), 64, 1.0f);
 }

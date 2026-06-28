@@ -24,6 +24,7 @@ struct TrackedActor {
     std::string playerName;
     bool sameTeam;
     bool isLocalPlayer;
+    uintptr_t pawn;
 };
 
 enum PlayerRole {
