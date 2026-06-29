@@ -45,7 +45,18 @@ namespace Offsets {
                 static constexpr uintptr_t PlayerController = 0x30;
 
                 struct SPlayerController {
+                    static constexpr uintptr_t AcknowledgedPawn = 0x350;
                     static constexpr uintptr_t PlayerCameraManager = 0x360;
+
+                    struct SPawn {
+                        static constexpr uintptr_t CharacterMovementComponent = 0x1530;
+
+                        struct SCharacterMovementComponent {
+                            static constexpr uintptr_t MaxWalkSpeed = 0x278;
+                            static constexpr uintptr_t MaxAcceleration = 0x28C;
+                            static constexpr uintptr_t MinAnalogWalkSpeed = 0x290;
+                        };
+                    };
 
                     struct SPlayerCameraManager {
                         static constexpr uintptr_t CameraCachePrivate = 0x1530;

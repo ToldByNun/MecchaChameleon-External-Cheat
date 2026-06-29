@@ -88,6 +88,7 @@ private:
 	bool resolveGameInstance();
 	bool resolveLocalPlayer();
 	bool resolvePlayerController();
+    bool tests();
 	bool resolveCameraManager();
 	bool resolveGameState();
 	bool validatePlayerArray();

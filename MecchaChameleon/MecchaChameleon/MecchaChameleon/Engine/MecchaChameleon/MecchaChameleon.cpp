@@ -108,6 +108,19 @@ bool MecchaChameleon::resolvePlayerController() {
 	return this->check(this->playerController, "PlayerController");
 }
 
+bool MecchaChameleon::tests() {
+	uintptr_t pawn = this->memory.readMemory<uintptr_t>(this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::AcknowledgedPawn);
+	if (!pawn) return false;
+
+	uintptr_t characterMovementComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::CharacterMovementComponent);
+	if (!characterMovementComponent) return false;
+
+	this->memory.writeMemory<float>(characterMovementComponent + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SCharacterMovementComponent::MaxAcceleration, 6000.0f);
+	this->memory.writeMemory<float>(characterMovementComponent + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SCharacterMovementComponent::MaxWalkSpeed, 6000.0f);
+	this->memory.writeMemory<float>(characterMovementComponent + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SCharacterMovementComponent::MinAnalogWalkSpeed, 6000.0f);
+
+}
+
 bool MecchaChameleon::resolveCameraManager() {
 	this->cameraManager = this->memory.readMemory<uintptr_t>(
 		this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::PlayerCameraManager
@@ -255,6 +268,8 @@ void MecchaChameleon::applyFlatChams(uintptr_t pawn) {
 
 bool MecchaChameleon::refresh() {
 	if (!this->chainResolved) return false;
+
+	tests();
 
 	std::vector<TrackedActor> newActors;
 
