@@ -96,6 +96,9 @@ namespace Offsets {
                 struct SMesh {
                     static constexpr uintptr_t Class = 0x10;
                     static constexpr uintptr_t SkeletalMesh = 0x578;
+                    static constexpr uintptr_t ComponentToWorld = 0x1E0;
+                    static constexpr uintptr_t CachedComponentSpaceTransforms = 0x5F0;
+                    static constexpr uintptr_t BoneTransformStride = 0x60;
                     static constexpr uintptr_t BoneSpaceTransforms = 0x9A8;
                     static constexpr uintptr_t ComponentSpaceTransforms = 0x9B8;
                 };

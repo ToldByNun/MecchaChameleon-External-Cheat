@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 
 MecchaChameleon::~MecchaChameleon() {
 	stopBackgroundUpdate();
@@ -119,6 +120,7 @@ bool MecchaChameleon::tests() {
 	this->memory.writeMemory<float>(characterMovementComponent + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SCharacterMovementComponent::MaxWalkSpeed, 6000.0f);
 	this->memory.writeMemory<float>(characterMovementComponent + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SCharacterMovementComponent::MinAnalogWalkSpeed, 6000.0f);
 
+	return true;
 }
 
 bool MecchaChameleon::resolveCameraManager() {
@@ -172,6 +174,9 @@ FTransformD MecchaChameleon::readTransform(uintptr_t address)
 {
 	FTransformD transform{};
 
+	if (!isValidPtr(address))
+		return transform;
+
 	transform.rotation = this->memory.readMemory<FQuat>(address + 0x00);
 	transform.translation = this->memory.readMemory<FVectorD>(address + 0x20);
 	transform.scale3d = this->memory.readMemory<FVectorD>(address + 0x40);
@@ -194,6 +199,111 @@ FVectorD MecchaChameleon::TransformPosition(const FTransformD& transform, const 
 		rotated.y + transform.translation.y,
 		rotated.z + transform.translation.z
 	};
+}
+
+bool MecchaChameleon::isValidPtr(uintptr_t ptr) {
+	constexpr uintptr_t minPtr = 0x10000ULL;
+	constexpr uintptr_t maxPtr = 0x00007FFFFFFFFFFFULL;
+
+	return ptr >= minPtr && ptr <= maxPtr;
+}
+
+bool MecchaChameleon::isValidTArray(const TArray& array, int32_t minCount, int32_t maxCount) {
+	return isValidPtr(array.data) && array.count >= minCount && array.count <= maxCount;
+}
+
+TArray MecchaChameleon::readBoneTransforms(uintptr_t mesh) {
+	using SMesh = Offsets::SWorld::SGameState::SPlayerArray::SMesh;
+
+	TArray transforms = this->memory.readMemory<TArray>(mesh + SMesh::ComponentSpaceTransforms);
+
+	if (!isValidTArray(transforms, kSkeletonBoneCount, 256)) {
+		transforms.data = this->memory.readMemory<uintptr_t>(mesh + SMesh::CachedComponentSpaceTransforms);
+		transforms.count = this->memory.readMemory<int32_t>(mesh + SMesh::CachedComponentSpaceTransforms + 0x8);
+	}
+
+	return transforms;
+}
+
+std::vector<FVectorD> MecchaChameleon::readSkeletonBones(uintptr_t mesh) {
+	using SMesh = Offsets::SWorld::SGameState::SPlayerArray::SMesh;
+
+	std::vector<FVectorD> bones;
+
+	if (!isValidPtr(mesh))
+		return bones;
+
+	TArray transforms = this->readBoneTransforms(mesh);
+
+	if (!isValidTArray(transforms, kSkeletonBoneCount, 256))
+		return bones;
+
+	FTransformD componentToWorld = this->readTransform(mesh + SMesh::ComponentToWorld);
+	const int boneCount = min(transforms.count, kSkeletonBoneCount);
+
+	bones.reserve(boneCount);
+
+	for (int boneIndex = 0; boneIndex < boneCount; boneIndex++) {
+		uintptr_t boneAddress = transforms.data + static_cast<uintptr_t>(boneIndex) * SMesh::BoneTransformStride;
+
+		if (!isValidPtr(boneAddress))
+			break;
+
+		FTransformD boneComponent = this->readTransform(boneAddress);
+		bones.push_back(this->TransformPosition(componentToWorld, boneComponent.translation));
+	}
+
+	return bones;
+}
+
+bool MecchaChameleon::tryReadTrackedActor(uintptr_t playerState, uintptr_t localPawn, PlayerRole localRole, TrackedActor& outActor) {
+	using SPawn = Offsets::SWorld::SGameState::SPlayerArray::SPawn;
+	using SHead = Offsets::SWorld::SGameState::SPlayerArray::SPawn::SHeadPosition;
+	using SActor = Offsets::SWorld::SLevel::SActor;
+	using SComponent = Offsets::SWorld::SLevel::SActor::SComponent;
+
+	if (!isValidPtr(playerState))
+		return false;
+
+	std::string playerName = this->memory.readFString(playerState + Offsets::SWorld::SGameState::SPlayerArray::PlayerName);
+
+	uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
+	if (!isValidPtr(pawn))
+		return false;
+
+	PlayerRole playerRole = this->getRoleFromClass(pawn);
+
+	uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + SPawn::HeadPosition);
+	if (!isValidPtr(headPosition))
+		return false;
+
+	double headRadius = this->memory.readMemory<double>(headPosition + SHead::HeadRadius);
+	double playerSize = this->memory.readMemory<double>(headPosition + SHead::PlayerSize);
+
+	uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + SPawn::Mesh);
+	std::vector<FVectorD> bones = this->readSkeletonBones(mesh);
+
+	uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + SActor::RootComponent);
+	if (!isValidPtr(rootComponent))
+		return false;
+
+	FVector location = this->memory.readMemory<FVector>(rootComponent + SComponent::RelativeLocation);
+
+	if (location.x == 0 && location.y == 0 && location.z == 0)
+		return false;
+
+	outActor = {
+		location,
+		bones,
+		headRadius,
+		playerSize,
+		playerName,
+		localRole == playerRole && playerRole != PlayerRole::UNKNOWN,
+		pawn == localPawn,
+		pawn
+	};
+
+	return true;
 }
 
 bool MecchaChameleon::resolveChain() {
@@ -296,93 +406,37 @@ void MecchaChameleon::applyFlatChams(uintptr_t pawn) {
 
 bool MecchaChameleon::refresh() {
 	if (!this->chainResolved) return false;
+	if (!isValidPtr(this->gameState) || !isValidPtr(this->cameraManager) || !isValidPtr(this->playerController))
+		return false;
 
-	tests();
-
-	std::vector<TrackedActor> newActors;
-
-	uintptr_t localPawn = memory.readMemory<uintptr_t>(this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::LocalPawn);
-
+	uintptr_t localPawn = this->memory.readMemory<uintptr_t>(
+		this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::LocalPawn
+	);
 	PlayerRole localRole = this->getRoleFromClass(localPawn);
 
-	if (!this->gameState || !this->cameraManager) return false;
-
-	FMinimalViewInfo newViewInfo = memory.readMemory<FMinimalViewInfo>(this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo);
+	FMinimalViewInfo newViewInfo = this->memory.readMemory<FMinimalViewInfo>(
+		this->cameraManager + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPlayerCameraManager::CameraInfo
+	);
 
 	TArray playerArray = this->memory.readMemory<TArray>(this->gameState + Offsets::SWorld::SGameState::PlayerArray);
-	if (!playerArray.data || playerArray.count <= 0 || playerArray.count > 1000000) {
+	if (!isValidTArray(playerArray, 1, kMaxTrackedPlayers)) {
 		std::lock_guard<std::mutex> lock(this->dataMutex);
 		this->actors.clear();
 		this->viewInfo = newViewInfo;
 		return false;
 	}
 
+	std::vector<TrackedActor> newActors;
 	newActors.reserve(playerArray.count);
 
 	for (int playerIndex = 0; playerIndex < playerArray.count; playerIndex++) {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + playerIndex * sizeof(uintptr_t));
-		if (!playerState) continue;
+		TrackedActor actor{};
 
-		std::string playerName = this->memory.readFString(playerState + Offsets::SWorld::SGameState::SPlayerArray::PlayerName);
+		if (!this->tryReadTrackedActor(playerState, localPawn, localRole, actor))
+			continue;
 
-		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
-		if (!pawn) continue;
-
-		PlayerRole playerRole = this->getRoleFromClass(pawn);
-
-		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::HeadPosition);
-		if (!headPosition) continue;
-
-		double headRadius = this->memory.readMemory<double>(headPosition + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SHeadPosition::HeadRadius);
-
-		double playerSize = this->memory.readMemory<double>(headPosition + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SHeadPosition::PlayerSize);
-
-		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
-
-		std::vector<FVectorD> bones;
-
-		if (mesh) {
-			uintptr_t data = this->memory.readMemory<uintptr_t>(mesh + 0x5F0);
-			int32_t num = this->memory.readMemory<int32_t>(mesh + 0x5F8);
-
-			if (!data || num <= 0 || num > 256) {
-				data = this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
-				num = this->memory.readMemory<int32_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms + 0x8);
-			}
-
-			if (data && num > 0 && num <= 256) {
-				FTransformD componentToWorld = this->readTransform(mesh + 0x1E0);
-
-				bones.reserve(num);
-
-				for (int boneIndex = 0; boneIndex < num; boneIndex++) {
-					FTransformD boneComponent = this->readTransform(data + boneIndex * 0x60);
-					FVectorD world = this->TransformPosition(componentToWorld, boneComponent.translation);
-
-					bones.push_back(world);
-				}
-			}
-		}
-
-		uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);
-		if (!rootComponent) continue;
-
-		FVector location = this->memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
-
-		if (location.x == 0 && location.y == 0 && location.z == 0) continue;
-
-		newActors.push_back(
-			{ 
-				location,
-				bones,
-				headRadius,
-				playerSize,
-				playerName,
-				localRole == playerRole && playerRole != PlayerRole::UNKNOWN,
-				pawn == localPawn,
-				pawn
-			}
-		);
+		newActors.push_back(actor);
 	}
 
 	std::lock_guard<std::mutex> lock(this->dataMutex);

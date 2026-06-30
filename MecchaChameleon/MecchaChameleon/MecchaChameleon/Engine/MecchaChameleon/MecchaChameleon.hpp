@@ -264,6 +264,11 @@ private:
     FTransformD readTransform(uintptr_t address);
     FVectorD TransformPosition(const FTransformD& transform, const FVectorD& position);
 
+    static bool isValidPtr(uintptr_t ptr);
+    static bool isValidTArray(const TArray& array, int32_t minCount, int32_t maxCount);
+    TArray readBoneTransforms(uintptr_t mesh);
+    std::vector<FVectorD> readSkeletonBones(uintptr_t mesh);
+    bool tryReadTrackedActor(uintptr_t playerState, uintptr_t localPawn, PlayerRole localRole, TrackedActor& outActor);
 };
 
 #endif // MECCHACHAMELEON_HPP

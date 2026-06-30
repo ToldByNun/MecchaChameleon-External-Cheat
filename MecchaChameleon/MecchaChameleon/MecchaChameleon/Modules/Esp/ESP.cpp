@@ -20,6 +20,11 @@ ImU32 getESPColor(const TrackedActor& actor) {
 	return IM_COL32(255, 255, 255, 255);
 }
 
+void drawOutlinedLine(ImDrawList* drawList, ImVec2 from, ImVec2 to, ImU32 color) {
+	drawList->AddLine(from, to, IM_COL32(0, 0, 0, 255), 4.0f);
+	drawList->AddLine(from, to, color, 2.0f);
+}
+
 namespace {
 	constexpr std::pair<int, int> skeletonPairs[] = {
 		{ 0,  1 }, { 1,  2 }, { 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
@@ -190,7 +195,7 @@ void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimal
 
 	for (const TrackedActor& actor : actors) {
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
-		if (actor.boneList.size() < 28) continue;
+		if (actor.boneList.size() < kSkeletonBoneCount) continue;
 
 		auto getBoneScreen = [&](int index, FVector2D& out) -> bool {
 			const FVectorD& bone = actor.boneList[index];
@@ -209,17 +214,11 @@ void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimal
 
 			if (!getBoneScreen(pair.first, from) || !getBoneScreen(pair.second, to)) continue;
 
-			drawList->AddLine(
+			drawOutlinedLine(
+				drawList,
 				ImVec2(from.x, from.y),
 				ImVec2(to.x, to.y),
-				IM_COL32(0, 0, 0, 255),
-				4.0f
-			);
-			drawList->AddLine(
-				ImVec2(from.x, from.y),
-				ImVec2(to.x, to.y),
-				getESPColor(actor),
-				2.0f
+				getESPColor(actor)
 			);
 		}
 	}

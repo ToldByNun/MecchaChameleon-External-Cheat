@@ -134,4 +134,7 @@ static FVectorD RotateVector(const FQuat& q, const FVectorD& v)
     };
 }
 
+inline constexpr int kSkeletonBoneCount = 28;
+inline constexpr int kMaxTrackedPlayers = 128;
+
 #endif // ENGINE_TYPES_HPP
