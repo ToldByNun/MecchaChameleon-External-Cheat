@@ -19,6 +19,7 @@
 
 struct TrackedActor {
     FVector location;
+    std::vector<FVectorD> boneList;
     double headRadius;
     double playerSize;
     std::string playerName;
@@ -258,6 +259,10 @@ public:
 
         return PlayerRole::UNKNOWN;
     }
+
+private:
+    FTransformD readTransform(uintptr_t address);
+    FVectorD TransformPosition(const FTransformD& transform, const FVectorD& position);
 
 };
 

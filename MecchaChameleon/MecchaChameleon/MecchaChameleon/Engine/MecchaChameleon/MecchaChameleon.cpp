@@ -168,6 +168,34 @@ bool MecchaChameleon::validatePlayerArray() {
 	return true;
 }
 
+FTransformD MecchaChameleon::readTransform(uintptr_t address)
+{
+	FTransformD transform{};
+
+	transform.rotation = this->memory.readMemory<FQuat>(address + 0x00);
+	transform.translation = this->memory.readMemory<FVectorD>(address + 0x20);
+	transform.scale3d = this->memory.readMemory<FVectorD>(address + 0x40);
+
+	return transform;
+}
+
+FVectorD MecchaChameleon::TransformPosition(const FTransformD& transform, const FVectorD& position)
+{
+	FVectorD scaled{
+		position.x * transform.scale3d.x,
+		position.y * transform.scale3d.y,
+		position.z * transform.scale3d.z
+	};
+
+	FVectorD rotated = RotateVector(transform.rotation, scaled);
+
+	return {
+		rotated.x + transform.translation.x,
+		rotated.y + transform.translation.y,
+		rotated.z + transform.translation.z
+	};
+}
+
 bool MecchaChameleon::resolveChain() {
 	if (!resolvePersistentLevel()) return false;
 	if (!resolveGameInstance()) return false;
@@ -291,8 +319,8 @@ bool MecchaChameleon::refresh() {
 
 	newActors.reserve(playerArray.count);
 
-	for (int i = 0; i < playerArray.count; i++) {
-		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + i * sizeof(uintptr_t));
+	for (int playerIndex = 0; playerIndex < playerArray.count; playerIndex++) {
+		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + playerIndex * sizeof(uintptr_t));
 		if (!playerState) continue;
 
 		std::string playerName = this->memory.readFString(playerState + Offsets::SWorld::SGameState::SPlayerArray::PlayerName);
@@ -310,32 +338,28 @@ bool MecchaChameleon::refresh() {
 		double playerSize = this->memory.readMemory<double>(headPosition + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SHeadPosition::PlayerSize);
 
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
-		/*if (mesh) {
-			//this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
-			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::BoneSpaceTransforms);
-			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
-		}*/
 
-		if (mesh)
-		{
+		std::vector<FVectorD> bones;
+
+		if (mesh) {
 			uintptr_t data = this->memory.readMemory<uintptr_t>(mesh + 0x5F0);
 			int32_t num = this->memory.readMemory<int32_t>(mesh + 0x5F8);
-			int32_t max = this->memory.readMemory<int32_t>(mesh + 0x5FC);
 
-			std::cout << "BoneArray: 0x" << data << '\n';
+			if (!data || num <= 0 || num > 256) {
+				data = this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
+				num = this->memory.readMemory<int32_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms + 0x8);
+			}
 
-			if (data && num > 0)
-			{
-				for (int i = 0; i < min(num, 5); i++)
-				{
-					double x = this->memory.readMemory<double>(data + i * 0x60 + 0x20);
-					double y = this->memory.readMemory<double>(data + i * 0x60 + 0x28);
-					double z = this->memory.readMemory<double>(data + i * 0x60 + 0x30);
+			if (data && num > 0 && num <= 256) {
+				FTransformD componentToWorld = this->readTransform(mesh + 0x1E0);
 
-					std::cout << "Bone[" << i << "] = ("
-						<< x << ", "
-						<< y << ", "
-						<< z << ")\n";
+				bones.reserve(num);
+
+				for (int boneIndex = 0; boneIndex < num; boneIndex++) {
+					FTransformD boneComponent = this->readTransform(data + boneIndex * 0x60);
+					FVectorD world = this->TransformPosition(componentToWorld, boneComponent.translation);
+
+					bones.push_back(world);
 				}
 			}
 		}
@@ -350,6 +374,7 @@ bool MecchaChameleon::refresh() {
 		newActors.push_back(
 			{ 
 				location,
+				bones,
 				headRadius,
 				playerSize,
 				playerName,

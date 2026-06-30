@@ -2,9 +2,7 @@
 #include "../../Engine/ImGui/imgui.h"
 #include "../../Manager/Globals/Globals.hpp"
 
-#include <iostream>
-#include <chrono>
-#include <vector>
+#include <utility>
 
 bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
 	if (sameTeam && onlyEnemiesEnabled) return false;
@@ -22,12 +20,25 @@ ImU32 getESPColor(const TrackedActor& actor) {
 	return IM_COL32(255, 255, 255, 255);
 }
 
+namespace {
+	constexpr std::pair<int, int> skeletonPairs[] = {
+		{ 0,  1 }, { 1,  2 }, { 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
+		{ 5,  8 }, { 8,  9 }, { 9, 10 }, { 10, 11 },
+		{ 5, 13 }, { 13, 14 }, { 14, 15 }, { 15, 16 },
+		{ 1, 19 }, { 19, 20 }, { 20, 21 },
+		{ 1, 24 }, { 24, 25 }, { 25, 26 },
+	};
+}
+
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
 
 	if (globals.settings.esp.corners)
 		this->renderCorners(actors, viewInfo);
+
+	if (globals.settings.esp.skeleton)
+		this->renderSkeleton(actors, viewInfo);
 	
 	if (globals.settings.esp.name && globals.settings.esp.distance)
 		this->renderNameDistance(actors, viewInfo, LabelType::NAMEDISTANCE);
@@ -170,6 +181,47 @@ void ESP::renderCorners(const std::vector<TrackedActor>& actors, const FMinimalV
 		drawCorner(right, top, -1.0f, 1.0f);
 		drawCorner(left, bottom, 1.0f, -1.0f);
 		drawCorner(right, bottom, -1.0f, -1.0f);
+	}
+}
+
+void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+
+	for (const TrackedActor& actor : actors) {
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (actor.boneList.size() < 28) continue;
+
+		auto getBoneScreen = [&](int index, FVector2D& out) -> bool {
+			const FVectorD& bone = actor.boneList[index];
+
+			return this->unreal.WorldToScreen(
+				viewInfo,
+				FVector{ bone.x, bone.y, bone.z },
+				out,
+				displaySize.x,
+				displaySize.y
+			);
+		};
+
+		for (const std::pair<int, int>& pair : skeletonPairs) {
+			FVector2D from, to;
+
+			if (!getBoneScreen(pair.first, from) || !getBoneScreen(pair.second, to)) continue;
+
+			drawList->AddLine(
+				ImVec2(from.x, from.y),
+				ImVec2(to.x, to.y),
+				IM_COL32(0, 0, 0, 255),
+				4.0f
+			);
+			drawList->AddLine(
+				ImVec2(from.x, from.y),
+				ImVec2(to.x, to.y),
+				getESPColor(actor),
+				2.0f
+			);
+		}
 	}
 }
 

@@ -26,10 +26,6 @@ void Aimbot::onAimbot(const std::vector<TrackedActor>& actors, const FMinimalVie
 	SendInput(1, &input, sizeof(INPUT));
 }
 
-bool Aimbot::isAimTarget(const TrackedActor& actor) {
-	return !actor.isLocalPlayer && !actor.sameTeam;
-}
-
 bool Aimbot::getActorHeadScreenPos(const TrackedActor& actor, const FMinimalViewInfo& viewInfo, FVector2D& outHeadPosition2D) {
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	FVector headWorld = actor.location + FVector(0, 0, actor.playerSize);
@@ -69,7 +65,7 @@ bool Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& actors, c
 		for (const TrackedActor& actor : actors) {
 			if (actor.pawn != this->lockedPawn) continue;
 
-			if (!this->isAimTarget(actor) || !this->isInFoV(actor, viewInfo)) {
+			if (actor.isLocalPlayer || actor.sameTeam || !this->isInFoV(actor, viewInfo)) {
 				this->lockedPawn = 0;
 				break;
 			}
@@ -87,7 +83,7 @@ bool Aimbot::getClosestTargetToCursor(const std::vector<TrackedActor>& actors, c
 	bool foundTarget = false;
 
 	for (const TrackedActor& actor : actors) {
-		if (!this->isAimTarget(actor) || !this->isInFoV(actor, viewInfo)) continue;
+		if (actor.isLocalPlayer || actor.sameTeam || !this->isInFoV(actor, viewInfo)) continue;
 
 		FVector2D currentEnemyScreenPos{};
 

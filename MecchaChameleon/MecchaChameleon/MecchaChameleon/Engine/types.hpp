@@ -2,6 +2,7 @@
 #define ENGINE_TYPES_HPP
 
 #include <cstdint>
+#include "Memory/Memory.hpp"
 
 struct FVector {
     double x, y, z;
@@ -82,6 +83,11 @@ struct FVector2D {
     }
 };
 
+struct FVectorD
+{
+    double x, y, z;
+};
+
 struct FQuat { double x, y, z, w; };
 struct FTransform {
     FQuat Rotation;
@@ -89,5 +95,43 @@ struct FTransform {
     char pad[0x8];
     FVector Scale3D;
 };
+
+struct FTransformD
+{
+    FQuat rotation;
+    FVectorD translation;
+    FVectorD scale3d;
+};
+
+static FVectorD RotateVector(const FQuat& q, const FVectorD& v)
+{
+    FVectorD qv{ q.x, q.y, q.z };
+
+    FVectorD uv{
+        qv.y * v.z - qv.z * v.y,
+        qv.z * v.x - qv.x * v.z,
+        qv.x * v.y - qv.y * v.x
+    };
+
+    FVectorD uuv{
+        qv.y * uv.z - qv.z * uv.y,
+        qv.z * uv.x - qv.x * uv.z,
+        qv.x * uv.y - qv.y * uv.x
+    };
+
+    uv.x *= 2.0 * q.w;
+    uv.y *= 2.0 * q.w;
+    uv.z *= 2.0 * q.w;
+
+    uuv.x *= 2.0;
+    uuv.y *= 2.0;
+    uuv.z *= 2.0;
+
+    return {
+        v.x + uv.x + uuv.x,
+        v.y + uv.y + uuv.y,
+        v.z + uv.z + uuv.z
+    };
+}
 
 #endif // ENGINE_TYPES_HPP
