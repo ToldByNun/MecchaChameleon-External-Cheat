@@ -308,7 +308,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 	for (const TrackedActor& actor : actors) {
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
 
-		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 1.3);
+		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 0.8f);
 		float hatRadius = 35.0f;
 		float hatHeight = 15.0f;
 
