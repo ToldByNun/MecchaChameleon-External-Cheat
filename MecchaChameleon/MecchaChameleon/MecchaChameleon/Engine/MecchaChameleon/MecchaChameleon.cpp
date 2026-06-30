@@ -310,10 +310,34 @@ bool MecchaChameleon::refresh() {
 		double playerSize = this->memory.readMemory<double>(headPosition + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SHeadPosition::PlayerSize);
 
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
-		if (mesh) {
+		/*if (mesh) {
 			//this->memory.readMemory<uintptr_t>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::SkeletalMesh);
 			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::BoneSpaceTransforms);
 			this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SMesh::ComponentSpaceTransforms);
+		}*/
+
+		if (mesh)
+		{
+			uintptr_t data = this->memory.readMemory<uintptr_t>(mesh + 0x5F0);
+			int32_t num = this->memory.readMemory<int32_t>(mesh + 0x5F8);
+			int32_t max = this->memory.readMemory<int32_t>(mesh + 0x5FC);
+
+			std::cout << "BoneArray: 0x" << data << '\n';
+
+			if (data && num > 0)
+			{
+				for (int i = 0; i < min(num, 5); i++)
+				{
+					double x = this->memory.readMemory<double>(data + i * 0x60 + 0x20);
+					double y = this->memory.readMemory<double>(data + i * 0x60 + 0x28);
+					double z = this->memory.readMemory<double>(data + i * 0x60 + 0x30);
+
+					std::cout << "Bone[" << i << "] = ("
+						<< x << ", "
+						<< y << ", "
+						<< z << ")\n";
+				}
+			}
 		}
 
 		uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);

@@ -2,8 +2,7 @@
 #include <cmath>
 
 bool Unreal::WorldToScreen(const FMinimalViewInfo& viewInfo, FVector worldLocation, FVector2D& screenPos, float screenWidth, float screenHeight) {
-    if (screenWidth <= 0.f || screenHeight <= 0.f)
-        return false;
+    if (screenWidth <= 0.f || screenHeight <= 0.f) return false;
 
     const double Pi = 3.14159265358979;
     const double RotToRad = Pi / 180.0;
