@@ -16,6 +16,9 @@ bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
+
+	if (globals.settings.esp.corners)
+		this->renderCorners(actors, viewInfo);
 	
 	if (globals.settings.esp.name && globals.settings.esp.distance)
 		this->renderNameDistance(actors, viewInfo, LabelType::NAMEDISTANCE);
@@ -90,6 +93,79 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 			),
 			0.0f, ImDrawFlags_None, 2.0f
 		);
+	}
+}
+
+void ESP::renderCorners(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+	FVector2D screenBottom, screenTop;
+
+	for (const TrackedActor& actor : actors) {
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+
+		bool bVisibleBottom = this->unreal.WorldToScreen(
+			viewInfo,
+			actor.location - FVector(0, 0, actor.playerSize),
+			screenBottom,
+			displaySize.x,
+			displaySize.y
+		);
+
+		bool bVisibleTop = this->unreal.WorldToScreen(
+			viewInfo,
+			actor.location + FVector(0, 0, actor.playerSize),
+			screenTop,
+			displaySize.x,
+			displaySize.y
+		);
+
+		if (!bVisibleBottom || !bVisibleTop) continue;
+
+		float height2D = abs(screenTop.y - screenBottom.y);
+		float width2D = height2D * 0.55f;
+		float centerX = screenBottom.x;
+
+		float left = centerX - (width2D * 0.5f);
+		float right = centerX + (width2D * 0.5f);
+		float top = screenTop.y;
+		float bottom = screenBottom.y;
+
+		float lineWidth = width2D * 0.25f;
+		float lineHeight = height2D * 0.20f;
+
+		auto drawCorner = [&](float x, float y, float directionX, float directionY) {
+			drawList->AddLine(
+				ImVec2(x, y),
+				ImVec2(x + (directionX * lineWidth), y),
+				IM_COL32(0, 0, 0, 255),
+				4.0f
+			);
+			drawList->AddLine(
+				ImVec2(x, y),
+				ImVec2(x, y + (directionY * lineHeight)),
+				IM_COL32(0, 0, 0, 255),
+				4.0f
+			);
+
+			drawList->AddLine(
+				ImVec2(x, y),
+				ImVec2(x + (directionX * lineWidth), y),
+				IM_COL32(255, 255, 255, 255),
+				2.0f
+			);
+			drawList->AddLine(
+				ImVec2(x, y),
+				ImVec2(x + (directionX * lineHeight), y),
+				IM_COL32(255, 255, 255, 255),
+				2.0f
+			);
+		};
+
+		drawCorner(left, top, 1.0f, 1.0f);
+		drawCorner(right, top, -1.0f, 1.0f);
+		drawCorner(left, bottom, 1.0f, -1.0f);
+		drawCorner(right, bottom, -1.0f, -1.0f);
 	}
 }
 

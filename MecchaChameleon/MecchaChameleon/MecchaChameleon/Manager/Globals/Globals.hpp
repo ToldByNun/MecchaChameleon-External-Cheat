@@ -9,6 +9,8 @@ class Aimbot;
 
 struct EspSettings {
     bool box = false;
+    bool corners = false;
+    bool corners = false;
     bool skeleton = false;
     bool name = false;
     bool distance = false;
