@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <vector>
 
 bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
 	if (sameTeam && onlyEnemiesEnabled) return false;
@@ -11,6 +12,14 @@ bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
 	if (isLocalPlayer) return false;
 
 	return true;
+}
+
+ImU32 getESPColor(const TrackedActor& actor) {
+	if (globals.settings.esp.isTeammateColorEnabled) {
+		return actor.sameTeam ? IM_COL32(255, 255, 255, 255) : IM_COL32(237, 52, 52, 255);
+	}
+
+	return IM_COL32(255, 255, 255, 255);
 }
 
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -81,16 +90,11 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 		// if isTeammateColorEnabled true and if they are on the same team, then use box color
 		// if they arent on the same team enemyboxcolor
 		// and if isTeammateColorEnabled false, then use default (boxColor)
+
 		drawList->AddRect(
 			topLeft,
 			bottomRight,
-			globals.settings.esp.isTeammateColorEnabled ? 
-			(
-				actor.sameTeam ? IM_COL32(255, 255, 255, 255) : IM_COL32(237, 52, 52, 255)
-			) : 
-			(
-				IM_COL32(255, 255, 255, 255)
-			),
+			getESPColor(actor),
 			0.0f, ImDrawFlags_None, 2.0f
 		);
 	}
@@ -151,13 +155,13 @@ void ESP::renderCorners(const std::vector<TrackedActor>& actors, const FMinimalV
 			drawList->AddLine(
 				ImVec2(x, y),
 				ImVec2(x + (directionX * lineWidth), y),
-				IM_COL32(255, 255, 255, 255),
+				getESPColor(actor),
 				2.0f
 			);
 			drawList->AddLine(
 				ImVec2(x, y),
-				ImVec2(x + (directionX * lineHeight), y),
-				IM_COL32(255, 255, 255, 255),
+				ImVec2(x, y + (directionY * lineHeight)),
+				getESPColor(actor),
 				2.0f
 			);
 		};
@@ -278,8 +282,15 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 		drawList->AddLine(
 			screenBottom,
 			ImVec2((float)screenPos.x, (float)screenPos.y),
-			IM_COL32(255, 255, 255, 200),
-			1.5f
+			IM_COL32(0, 0, 0, 255),
+			4.0f
+		);
+
+		drawList->AddLine(
+			screenBottom,
+			ImVec2((float)screenPos.x, (float)screenPos.y),
+			getESPColor(actor),
+			2.0f
 		);
 
 		linesDrawn++;
