@@ -29,7 +29,7 @@ External cheat for **MecchaChameleon** (UE5) — built for **memory research and
 
 The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable, scans for `GWorld` / `GNames` via AOB patterns with RIP-relative resolution, and walks core Unreal structures (world chain, `GameState` player array, skeletal mesh bones, head/capsule sizing, camera POV) to understand how runtime state is laid out in memory. A transparent DXGI overlay (DirectX 11 + ImGui) renders on top of the game window.
 
-> **v0.0.2** — custom ImGui UI (Combat / Visuals categories, dual-section layout, themed toggles & sliders), world-pointer monitoring with automatic chain re-resolution on map changes, combined name+distance ESP labels, and aimbot wiring fixes. Skeleton ESP and Chinese hat remain experimental / not menu-exposed.
+> **v0.0.2** — skeleton ESP (28-bone rig), corner ESP, FoV circle overlay, combined name/distance labels, aimbot with target lock + `SendInput` relative mouse movement, pointer validation on all runtime reads, and refactored actor/bone snapshot pipeline.
 
 <br/>
 
@@ -61,7 +61,8 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **View info** | Live `FMinimalViewInfo` from `PlayerCameraManager` | done |
 | **Player tracking** | `GameState → PlayerArray → Pawn → RootComponent` positions | done |
 | **Player sizing** | Head capsule radius + player height from pawn components | done |
-| **Mesh / bones** | Init-time validation of skeletal mesh & bone transform arrays | done |
+| **Mesh / bones** | Component-space bone transforms → world positions (28 bones) | done |
+| **Pointer safety** | `isValidPtr` / `isValidTArray` guards on all runtime reads | done |
 | **Object dumper** | `dumpObjectRefsDeep()` for RE pointer walks | done |
 | **Class lifecycle** | `ClassManager` + `Globals` for init/deinit of all modules | done |
 | **Projection** | `WorldToScreen` (`FMinimalViewInfo → FVector2D`) | done |
@@ -70,40 +71,27 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **World re-resolution** | Monitors `GWorld` address vs value; re-walks chain on world change | done |
 | **Menu** | Custom ImGui widgets, **Combat** / **Visuals** categories, dual-section layout | done |
 | **Box ESP** | 2D bounding box from projected foot/head using `playerSize` | done |
+| **Corner ESP** | Corner-style box overlay | done |
+| **Skeleton ESP** | 28-bone wireframe (spine, arms, legs — no end bones) | done |
 | **Snaplines ESP** | Lines from screen bottom-center to projected actor feet | done |
 | **Name / distance** | Player name, distance in metres, or combined `name / Xm` label | done |
+| **FoV circle** | Crosshair-radius circle (shared size with aimbot FOV slider) | done |
 | **Team filter** | Hunter / Survivor / Spectator role detection, hide teammates | done |
 | **Enemy box colors** | Optional red tint for non-teammates | done |
-| **Aimbot** | Closest-to-crosshair target, FOV radius, smoothing, RMB hold | done |
-| **Chinese hat** | RGB cone overlay — implemented, unstable, not in menu | WIP |
-| **Skeleton ESP** | Menu toggle present, rendering not implemented | planned |
+| **Aimbot** | Closest-to-crosshair, target lock, FOV limit, smoothing, RMB hold | done |
+| **Chinese hat** | RGB cone overlay — in menu, still experimental | WIP |
 | **Flat chams** | Experimental material swap via `writeMemory` — not in menu | WIP |
 
 ---
 
 ## Planned features
 
-### ESP
-
 | Feature | Description |
 |:--------|:------------|
-| **Box ESP** | 2D bounding boxes around actors via world-to-screen |
-| **Skeleton ESP** | Bone chain overlay for humanoid meshes |
-| **Name / distance** | Actor name, distance, or combined label |
-| **Snaplines** | Lines from screen center or bottom to target |
-| **Health / state** | Optional bars or flags when offsets are known |
-| **Chinese hat** | RGB hat above players |
-
-### Aimbot
-
-| Feature | Description | Status |
-|:--------|:------------|:------:|
-| **Target selection** | Closest enemy to screen centre (skips local player & teammates) | done |
-| **FOV limit** | Configurable radius around crosshair | done |
-| **Smoothing** | Interpolated cursor step per frame | done |
-| **Keybind** | Hold right mouse button (default) while enabled | done |
-| **Bone aim** | Head / chest / configurable bone index | planned |
-| **Visibility check** | Skip actors behind geometry when trace data exists | planned |
+| **Bone-based aim** | Aim at configurable bone index instead of head capsule |
+| **Visibility check** | Skip actors behind geometry when trace data exists |
+| **Chinese hat polish** | Stabilise positioning / enable by default |
+| **Flat chams** | Menu toggle + safer material swap path |
 
 ---
 
@@ -130,8 +118,9 @@ flowchart LR
     C -->|"init: AOB scan"| GW["GWorld / GNames"]
     GW --> H["UWorld chain"]
     H --> I["GameState → PlayerArray"]
-    I --> J["Pawn → RootComponent → FVector"]
-    I --> K["HeadPosition → playerSize"]
+    I --> J["tryReadTrackedActor()"]
+    J --> K["RootComponent → FVector"]
+    J --> L2["readSkeletonBones()"]
 
     H --> L["GameInstance → CameraManager"]
     L --> M2["FMinimalViewInfo"]
@@ -140,7 +129,7 @@ flowchart LR
     B -->|"getSnapshot()"| A
     U -->|"WorldToScreen()"| E
     U -->|"WorldToScreen()"| AB
-    AB -->|"SetCursorPos (RMB)"| N2["OS cursor"]
+    AB -->|"SendInput (RMB)"| N2["Relative mouse"]
     O -->|"DX11 + ImGui"| N["Transparent overlay HWND"]
     M --> G
 
@@ -168,14 +157,25 @@ Module scan (AOB)
             │       └── LocalPlayers → PlayerController → PlayerCameraManager
             │               └── FMinimalViewInfo (CameraInfo)
             └── GameState
-                    └── PlayerArray (TArray)
+                    └── PlayerArray (TArray, max 128)
                             └── PlayerState → Pawn
                                     ├── HeadPosition (SphereComponent) → headRadius, playerSize
-                                    ├── Mesh → SkeletalMesh / BoneSpaceTransforms / ComponentSpaceTransforms
+                                    ├── Mesh → ComponentSpaceTransforms → readSkeletonBones()
                                     └── RootComponent → RelativeLocation
 ```
 
-**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` → `Aimbot::onAimbot()` → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
+**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` (always, incl. FoV circle) → `Aimbot::onAimbot()` when actors present → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
+
+**Aimbot behaviour:**
+
+- Picks closest enemy to **screen centre** (crosshair), not OS cursor position.
+- **Target lock** — stays on the same pawn while RMB is held; clears on release.
+- Moves aim via `SendInput` relative mouse delta (works with raw-input games).
+- Optional FOV radius filter and smoothing (`smooth = 1` when smoothing is off).
+
+**Skeleton bone map (28 bones, index 0–27):**
+
+`root → pelvis → spine → neck → head` · arms to hands · legs to feet (no `*_end` bones drawn).
 
 ---
 
@@ -197,7 +197,7 @@ MecchaChameleon/                          # repo / solution root
         │   └── Globals/                  # shared pointers + AppSettings
         ├── Engine/
         │   ├── offsets.hpp               # struct offsets + AOB patterns
-        │   ├── types.hpp
+        │   ├── types.hpp                 # UE structs + kSkeletonBoneCount
         │   ├── helpers.hpp               # FName resolution
         │   ├── Memory/                   # attach, read, AOB scan, RIP resolve
         │   ├── MecchaChameleon/          # core module (init, update, snapshot)
@@ -208,7 +208,7 @@ MecchaChameleon/                          # repo / solution root
             ├── Overlay/                  # transparent DXGI overlay window
             ├── Menu/                     # ImGui menu
             ├── Esp/                      # ESP draw helpers
-            └── Aimbot/                   # cursor-based aim assist
+            └── Aimbot/                   # relative-mouse aim assist
 ```
 
 ---
@@ -263,9 +263,13 @@ If an AOB pattern fails to match after a game update, update the patterns in `of
 | Key | Action |
 |:----|:-------|
 | **INSERT** | Toggle ImGui menu (overlay becomes interactive while open) |
-| **Right mouse button** | Hold while aimbot is enabled to acquire closest target |
+| **Right mouse button** | Hold while aimbot is enabled to lock onto closest target |
 
-Menu categories: **Combat** (aimbot toggles + FOV/smooth sliders), **Visuals** (ESP toggles + teammate/enemy color options). Footer shows current version.
+**Combat** — aimbot enable, FOV limit, smoothing (+ sliders when toggled on).
+
+**Visuals** — box, corners, skeleton, snaplines, name, distance, FoV circle, chinese hat (+ hide teammates / enemy colour in options). Enable both **Name** and **Distance** for combined `PlayerName / 12m` labels. **Show FoV** exposes the radius slider in options.
+
+Footer shows current version (`0.0.2`).
 
 ---
 
@@ -294,12 +298,16 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 | `RelativeLocation` | `+0x140` | Component translation |
 | `LocalPlayers` | `+0x38` | `UGameInstance` → local player array |
 | `PlayerController` | `+0x30` | `ULocalPlayer` → controller |
+| `LocalPawn` | `+0x2E8` | `APlayerController` → possessed pawn |
 | `PlayerCameraManager` | `+0x360` | `APlayerController` → camera manager |
 | `CameraInfo` | `+0x1540` | `FMinimalViewInfo` in camera manager |
 | `PlayerArray` | `+0x2C0` | `AGameState` → player state array |
 | `PlayerName` | `+0x340` | `APlayerState` → display name (`FString`) |
 | `Pawn` | `+0x320` | `APlayerState` → possessed pawn |
 | `Mesh` | `+0x418` | `APawn` → skeletal mesh component |
+| `ComponentToWorld` | `+0x1E0` | Mesh component world transform |
+| `CachedComponentSpaceTransforms` | `+0x5F0` | Fallback bone transform array |
+| `BoneTransformStride` | `0x60` | Size of each `FTransform` entry |
 | `SkeletalMesh` | `+0x578` | `USkeletalMeshComponent` → mesh asset |
 | `BoneSpaceTransforms` | `+0x9A8` | Bone transform array (bone space) |
 | `ComponentSpaceTransforms` | `+0x9B8` | Bone transform array (component space) |
@@ -318,7 +326,7 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 - [x] `GNames` / FName decoding
 - [x] `UWorld` pointer chain resolution
 - [x] `GameState` player array parsing
-- [x] Skeletal mesh & bone transform validation
+- [x] Skeletal mesh & bone transform reads
 - [x] Head/capsule sizing for ESP bounds
 - [x] `ClassManager` + `Globals` module lifecycle
 - [x] Root-component transform reads
@@ -326,23 +334,28 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 - [x] Live `FMinimalViewInfo` extraction
 - [x] Background update thread + thread-safe snapshot
 - [x] World-pointer monitoring + chain re-resolution
+- [x] Pointer validation on runtime reads
 - [x] Overlay render loop (DirectX 11 / ImGui)
 - [x] Custom ImGui menu & shared settings
 
 **ESP**
 
 - [x] Box ESP
-- [x] Name / distance labels
+- [x] Corner ESP
+- [x] Skeleton ESP
+- [x] Name / distance labels (combined mode)
 - [x] Snaplines
+- [x] FoV circle
 - [x] Team filter & enemy box colors
-- [ ] Skeleton ESP
-- [ ] Chinese hat (code exists, menu toggle pending)
+- [ ] Chinese hat polish
 
 **Aimbot**
 
 - [x] Target selection (closest to crosshair)
+- [x] Target lock while key held
 - [x] FOV filter & smoothing
 - [x] Right-click hold keybind
+- [x] `SendInput` relative mouse movement
 - [ ] Bone-based aim
 - [ ] Visibility check
 
