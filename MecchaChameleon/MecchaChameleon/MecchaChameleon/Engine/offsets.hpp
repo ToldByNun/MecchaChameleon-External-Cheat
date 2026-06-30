@@ -47,6 +47,7 @@ namespace Offsets {
                 struct SPlayerController {
                     static constexpr uintptr_t AcknowledgedPawn = 0x350;
                     static constexpr uintptr_t PlayerCameraManager = 0x360;
+                    static constexpr uintptr_t LocalPawn = 0x2E8;
 
                     struct SPawn {
                         static constexpr uintptr_t CharacterMovementComponent = 0x1530;
@@ -77,6 +78,14 @@ namespace Offsets {
                 struct SPawn {
                     static constexpr uintptr_t Mesh = 0x418;
                     static constexpr uintptr_t HeadPosition = 0x400;
+
+                    struct SMesh {
+                        static constexpr uintptr_t OverrideMaterials = 0x520;
+
+                        struct SMaterial {
+                            static constexpr uintptr_t ParentMaterial = 0x128;
+                        };
+                    };
 
                     struct SHeadPosition {
                         static constexpr uintptr_t HeadRadius = 0x540;

@@ -149,7 +149,7 @@ bool MecchaChameleon::validatePlayerArray() {
 		uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
 		if (!this->check(pawn, "Pawn")) continue;
 
-		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + 0x400);
+		uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::HeadPosition);
 		if (!this->check(headPosition, "HeadPosition")) continue;
 
 		uintptr_t mesh = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh);
@@ -237,7 +237,7 @@ void MecchaChameleon::applyFlatChams(uintptr_t pawn) {
 	if (!mesh)
 		return;
 
-	TArray overrideMaterials = this->memory.readMemory<TArray>(mesh + 0x520);
+	TArray overrideMaterials = this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SMesh::OverrideMaterials);
 
 	if (!overrideMaterials.data || overrideMaterials.count <= 0 || overrideMaterials.count > 8)
 		return;
@@ -253,7 +253,7 @@ void MecchaChameleon::applyFlatChams(uintptr_t pawn) {
 	if (materialName == "M_PaintTarget")
 		return;
 
-	uintptr_t parentMaterial = this->memory.readMemory<uintptr_t>(material + 0x128);
+	uintptr_t parentMaterial = this->memory.readMemory<uintptr_t>(material + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SMesh::SMaterial::ParentMaterial);
 
 	if (!parentMaterial)
 		return;
@@ -273,7 +273,7 @@ bool MecchaChameleon::refresh() {
 
 	std::vector<TrackedActor> newActors;
 
-	uintptr_t localPawn = memory.readMemory<uintptr_t>(this->playerController + 0x2E8);
+	uintptr_t localPawn = memory.readMemory<uintptr_t>(this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::LocalPawn);
 
 	PlayerRole localRole = this->getRoleFromClass(localPawn);
 
