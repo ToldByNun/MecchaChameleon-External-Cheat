@@ -9,29 +9,42 @@
 #include "../../Engine/ImGui/Custom/Toggle.hpp"
 #include "../../Engine/ImGui/Custom/Slider.hpp"
 #include "../../Engine/ImGui/Custom/Presets.hpp"
+#include "../../Engine/ImGui/Custom/Dropdown.hpp"
+#include "../../Engine/ImGui/Custom/ColorPicker.hpp"
 
 static int activeCategory = 0;
 
 static const char* categories[] = { "Combat", "Visuals" };
+static const char* teamOptions[] = { "Enemy", "Teammate" };
 
 void Menu::handleInput() {
 	if (GetAsyncKeyState(VK_INSERT) & 1)
 		globals.settings.menuOpen = !globals.settings.menuOpen;
 }
 
+static void renderColorWidget(const char* name, ImVec4& defaultColor, ImVec4& enemyColor) {
+	globals.settings.esp.selectedTeam == 0 ? 
+		Custom::ColorPicker(name, &defaultColor) :
+		Custom::ColorPicker(name, &enemyColor);
+}
+
 static void renderEspSettings() {
 	Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
 	Custom::Toggle("Box ESP", &globals.settings.esp.box);
 	Custom::Toggle("Corner ESP", &globals.settings.esp.corners);
+	renderColorWidget("Box Color", globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor);
 	Custom::Toggle("Dynamic Boxes", &globals.settings.esp.dynamicBoxes);
 	Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
+	renderColorWidget("Skeleton Color", globals.settings.esp.defaultSkeletonColor, globals.settings.esp.enemySkeletonColor);
 	Custom::Toggle("Chinese Hat", &globals.settings.esp.chineseHat);
 	Custom::Toggle("Name", &globals.settings.esp.name);
 	Custom::Toggle("Distance", &globals.settings.esp.distance);
 	Custom::Toggle("Snaplines", &globals.settings.esp.snaplines);
+	renderColorWidget("Snaplines Color", globals.settings.esp.defaultSnaplineColor, globals.settings.esp.enemySnaplineColor);
 }
 
 static void renderEspOptions() {
+	Custom::Dropdown("Team", &globals.settings.esp.selectedTeam, teamOptions, IM_ARRAYSIZE(teamOptions));
 	if (globals.settings.esp.fovCircle)
 		Custom::SliderFloat("FoV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
 	Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);

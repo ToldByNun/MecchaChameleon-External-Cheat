@@ -91,6 +91,41 @@ GuiPresets MakeDefaultPresets() {
 	presets.slider.rowHeight = 28.f;
 	presets.slider.spacing = 8.f;
 
+	presets.dropdown.labelColor = ColorFromHex(0xE8E8E8);
+	presets.dropdown.boxBackground = ColorFromHex(0x101010);
+	presets.dropdown.boxBorder = ColorFromHex(0x292929);
+	presets.dropdown.boxBorderHovered = ColorFromHex(0xC46B84);
+	presets.dropdown.boxBorderOpen = ColorFromHex(0xC46B84);
+	presets.dropdown.textColor = ColorFromHex(0xE8E8E8);
+	presets.dropdown.textSelected = ColorFromHex(0xE8E8E8);
+	presets.dropdown.textHovered = ColorFromHex(0xFFFFFF);
+	presets.dropdown.popupBackground = ColorFromHex(0x141414);
+	presets.dropdown.popupBorder = ColorFromHex(0x292929);
+	presets.dropdown.itemHighlight = ColorFromHex(0x212122);
+	presets.dropdown.arrowColor = ColorFromHex(0x6E6E6E);
+	presets.dropdown.rowHeight = 28.f;
+	presets.dropdown.boxHeight = 22.f;
+	presets.dropdown.spacing = 8.f;
+	presets.dropdown.rounding = 2.f;
+	presets.dropdown.popupRounding = 2.f;
+	presets.dropdown.itemHeight = 22.f;
+	presets.dropdown.arrowWidth = 18.f;
+
+	presets.colorPicker.labelColor = ColorFromHex(0xE8E8E8);
+	presets.colorPicker.previewBorder = ColorFromHex(0x292929);
+	presets.colorPicker.previewBorderHovered = ColorFromHex(0xC46B84);
+	presets.colorPicker.popupBackground = ColorFromHex(0x141414);
+	presets.colorPicker.popupBorder = ColorFromHex(0x292929);
+	presets.colorPicker.grabBorder = ColorFromHex(0xE8E8E8);
+	presets.colorPicker.rowHeight = 28.f;
+	presets.colorPicker.previewSize = 20.f;
+	presets.colorPicker.spacing = 8.f;
+	presets.colorPicker.rounding = 2.f;
+	presets.colorPicker.svPickerSize = 140.f;
+	presets.colorPicker.hueBarHeight = 12.f;
+	presets.colorPicker.popupPadding = 8.f;
+	presets.colorPicker.grabRadius = 5.f;
+
 	return presets;
 }
 

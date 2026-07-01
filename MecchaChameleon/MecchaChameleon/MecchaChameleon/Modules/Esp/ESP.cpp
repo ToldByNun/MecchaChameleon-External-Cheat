@@ -17,12 +17,12 @@ bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer, b
 	return true;
 }
 
-ImU32 getESPColor(const TrackedActor& actor) {
-	if (globals.settings.esp.isTeammateColorEnabled) {
-		return actor.sameTeam ? IM_COL32(255, 255, 255, 255) : IM_COL32(237, 52, 52, 255);
-	}
-
-	return IM_COL32(255, 255, 255, 255);
+// also very scuffed but its on my todo list
+ImU32 getESPColor(const TrackedActor& actor, const ImVec4& defaultSetting, const ImVec4& enemySetting) {
+	const ImVec4& color = (globals.settings.esp.isTeammateColorEnabled && !actor.sameTeam)
+		? enemySetting
+		: defaultSetting;
+	return Custom::ColorToU32(color);
 }
 
 void drawOutlinedLine(ImDrawList* drawList, ImVec2 from, ImVec2 to, ImU32 color) {
@@ -212,7 +212,7 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 		drawList->AddRect(
 			topLeft,
 			bottomRight,
-			getESPColor(actor),
+			getESPColor(actor, globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor),
 			0.0f, ImDrawFlags_None, 2.0f
 		);
 	}
@@ -259,13 +259,13 @@ void ESP::renderCorners(const std::vector<TrackedActor>& actors, const FMinimalV
 			drawList->AddLine(
 				ImVec2(x, y),
 				ImVec2(x + (directionX * lineWidth), y),
-				getESPColor(actor),
+				getESPColor(actor, globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor),
 				2.0f
 			);
 			drawList->AddLine(
 				ImVec2(x, y),
 				ImVec2(x, y + (directionY * lineHeight)),
-				getESPColor(actor),
+				getESPColor(actor, globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor),
 				2.0f
 			);
 		};
@@ -309,7 +309,7 @@ void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimal
 			drawList->AddLine(
 				ImVec2(from.x, from.y),
 				ImVec2(to.x, to.y),
-				IM_COL32(255, 255, 255, 255),
+				getESPColor(actor, globals.settings.esp.defaultSkeletonColor, globals.settings.esp.enemySkeletonColor),
 				1.0f
 			);
 		}
@@ -432,7 +432,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 		drawList->AddLine(
 			screenBottom,
 			ImVec2((float)screenPos.x, (float)screenPos.y),
-			getESPColor(actor),
+			getESPColor(actor, globals.settings.esp.defaultSnaplineColor, globals.settings.esp.enemySnaplineColor),
 			2.0f
 		);
 

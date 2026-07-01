@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../Engine/ImGui/Custom/ColorPicker.hpp"
+
 class ClassManager;
 class MecchaChameleon;
 class Overlay;
@@ -10,13 +12,22 @@ class Aimbot;
 struct EspSettings {
     bool box = false;
     bool corners = false;
+    ImVec4 defaultBoxColor = Custom::ColorFromHex(0xFFFFFF);
+    ImVec4 enemyBoxColor = Custom::ColorFromHex(0x9966ff);
     bool dynamicBoxes = false;
     bool skeleton = true;
+    ImVec4 defaultSkeletonColor = Custom::ColorFromHex(0xFFFFFF);
+    ImVec4 enemySkeletonColor = Custom::ColorFromHex(0xFFFFFF);
     bool name = false;
     bool distance = false;
     bool snaplines = false;
+    ImVec4 defaultSnaplineColor = Custom::ColorFromHex(0xFFFFFF);
+    ImVec4 enemySnaplineColor = Custom::ColorFromHex(0x9966ff);
     bool chineseHat = false;
     bool fovCircle = false;
+
+    // options
+    int selectedTeam = 0;
     bool onlyEnemies = false;
     bool isTeammateColorEnabled = false;
 

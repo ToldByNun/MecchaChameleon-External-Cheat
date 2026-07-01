@@ -96,6 +96,45 @@ struct SliderPreset {
 	float spacing = 8.f;
 };
 
+struct DropdownPreset {
+	ImVec4 labelColor{};
+	ImVec4 boxBackground{};
+	ImVec4 boxBorder{};
+	ImVec4 boxBorderHovered{};
+	ImVec4 boxBorderOpen{};
+	ImVec4 textColor{};
+	ImVec4 textSelected{};
+	ImVec4 textHovered{};
+	ImVec4 popupBackground{};
+	ImVec4 popupBorder{};
+	ImVec4 itemHighlight{};
+	ImVec4 arrowColor{};
+	float rowHeight = 28.f;
+	float boxHeight = 22.f;
+	float spacing = 8.f;
+	float rounding = 2.f;
+	float popupRounding = 2.f;
+	float itemHeight = 22.f;
+	float arrowWidth = 18.f;
+};
+
+struct ColorPickerPreset {
+	ImVec4 labelColor{};
+	ImVec4 previewBorder{};
+	ImVec4 previewBorderHovered{};
+	ImVec4 popupBackground{};
+	ImVec4 popupBorder{};
+	ImVec4 grabBorder{};
+	float rowHeight = 28.f;
+	float previewSize = 20.f;
+	float spacing = 8.f;
+	float rounding = 2.f;
+	float svPickerSize = 140.f;
+	float hueBarHeight = 12.f;
+	float popupPadding = 8.f;
+	float grabRadius = 5.f;
+};
+
 struct GuiPresets {
 	MainGuiPreset mainGui{};
 	TopBarPreset topBar{};
@@ -103,6 +142,8 @@ struct GuiPresets {
 	SectionPreset section{};
 	TogglePreset toggle{};
 	SliderPreset slider{};
+	DropdownPreset dropdown{};
+	ColorPickerPreset colorPicker{};
 };
 
 extern GuiPresets g_presets;
