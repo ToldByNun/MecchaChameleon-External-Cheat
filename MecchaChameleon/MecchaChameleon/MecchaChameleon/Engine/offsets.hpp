@@ -29,11 +29,30 @@ namespace Offsets {
                 static constexpr uintptr_t Class = 0x10;
                 static constexpr uintptr_t Name = 0x18;
                 static constexpr uintptr_t RootComponent = 0x1B8;
+                static constexpr uintptr_t ExtendedPhysicsCharacterMoverComponent = 0x3F8;
 
                 struct SComponent {
                     static constexpr uintptr_t RelativeLocation = 0x140;
                     static constexpr uintptr_t RelativeRotation = 0x158;
                     static constexpr uintptr_t RelativeScale3D = 0x170;
+                };
+
+                // TP exploit
+                struct SMoverComponent {
+                    static constexpr uintptr_t SyncStateSlot0 = 0x2B8;
+                    static constexpr uintptr_t SyncStateSlotStride = 0x78;
+                    static constexpr uintptr_t SyncHeapPointer = 0x3A8;
+
+                    struct SSyncHeap {
+                        static constexpr uintptr_t ScanWindowSize = 0x4000;
+
+                        struct SDefaultSyncState {
+                            static constexpr uintptr_t LocationX = 0x08; // double
+                            static constexpr uintptr_t LocationY = 0x10; // double
+                            static constexpr uintptr_t LocationZ = 0x18; // double
+                            static constexpr uintptr_t MarkerFilter = 0x28; // ~90.0
+                        };
+                    };
                 };
             };
         };
@@ -51,11 +70,22 @@ namespace Offsets {
 
                     struct SPawn {
                         static constexpr uintptr_t CharacterMovementComponent = 0x1530;
+                        static constexpr uintptr_t ExtendedPhysicsCharacterMoverComponent = 0x3F8;
 
                         struct SCharacterMovementComponent {
                             static constexpr uintptr_t MaxWalkSpeed = 0x278;
                             static constexpr uintptr_t MaxAcceleration = 0x28C;
                             static constexpr uintptr_t MinAnalogWalkSpeed = 0x290;
+                        };
+
+                        struct SRootComponent {
+                            static constexpr uintptr_t RelativeLocation = 0x140;
+                            static constexpr uintptr_t ComponentToWorldTranslation = 0x200;
+                        };
+
+                        struct SMoverComponent {
+                            static constexpr uintptr_t SyncStateSlot0 = 0x2B8;
+                            static constexpr uintptr_t SyncHeapPointer = 0x3A8;
                         };
                     };
 
