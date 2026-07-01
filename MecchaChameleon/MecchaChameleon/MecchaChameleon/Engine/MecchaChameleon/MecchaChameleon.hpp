@@ -74,6 +74,7 @@ private:
 
     std::vector<TrackedActor> actors;
     FMinimalViewInfo viewInfo{};
+    FVector localPlayerWorldLocation{};
     std::mutex dataMutex;
     std::atomic<bool> backgroundRunning{ false };
     std::thread updateThread;
