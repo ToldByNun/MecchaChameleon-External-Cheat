@@ -28,6 +28,14 @@ struct TrackedActor {
     uintptr_t pawn;
 };
 
+struct PlayerLocationRead {
+    FVector worldLocation{}; // root + 0x200
+    FVector relativeLocation{}; // root + 0x140 (Debug)
+    FVector moverSyncLocation{}; // heap scan
+    bool hasWorldLocation = false;
+    bool hasMoverSync = false;
+};
+
 enum PlayerRole {
     HUNTER,
     SURVIVOR,
@@ -261,6 +269,11 @@ public:
     }
 
 private:
+    FVector readRelativeLocation(uintptr_t rootComponent);
+    FVector readWorldLocation(uintptr_t pawn);
+    bool tryReadMoverSyncLocation(uintptr_t pawn, const FVector& groundTruth, FVector& outSync);
+    PlayerLocationRead readPlayerLocation(uintptr_t pawn);
+
     FTransformD readTransform(uintptr_t address);
     FVectorD TransformPosition(const FTransformD& transform, const FVectorD& position);
 

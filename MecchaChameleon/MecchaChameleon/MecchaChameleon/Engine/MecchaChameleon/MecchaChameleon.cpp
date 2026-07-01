@@ -170,12 +170,83 @@ bool MecchaChameleon::validatePlayerArray() {
 	return true;
 }
 
+FVector MecchaChameleon::readRelativeLocation(uintptr_t rootComponent) {
+	if (!this->isValidPtr(rootComponent)) return {};
+
+	return this->memory.readMemory<FVector>(rootComponent + Offsets::SWorld::SLevel::SActor::SComponent::RelativeLocation);
+}
+
+FVector MecchaChameleon::readWorldLocation(uintptr_t pawn) {
+	if (!this->isValidPtr(pawn)) return {};
+
+	uintptr_t root = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);
+
+	if (!this->isValidPtr(root)) return {};
+
+	return this->memory.readMemory<FVector>(root + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::SPawn::SRootComponent::ComponentToWorldTranslation);
+}
+
+bool MecchaChameleon::tryReadMoverSyncLocation(uintptr_t pawn, const FVector& groundTruth, FVector& outSync) {
+	constexpr double kTol = 0.75;
+
+	if (!this->isValidPtr(pawn)) return false;
+
+	uintptr_t mover = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::ExtendedPhysicsCharacterMoverComponent);
+	if (!this->isValidPtr(mover)) return false;
+
+	uintptr_t heapBase = this->memory.readMemory<uintptr_t>(mover + Offsets::SWorld::SLevel::SActor::SMoverComponent::SyncHeapPointer);
+	if (!this->isValidPtr(heapBase)) return false;
+
+	std::vector<uint8_t> heap(Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::ScanWindowSize);
+	if (!this->memory.readRawMemory(heapBase, heap.data(), heap.size())) return false;
+
+	uintptr_t matchAddress = 0;
+
+	for (size_t off = 0; off + 0x20 <= heap.size(); off += 8) {
+		double x{}, y{}, z{};
+		std::memcpy(&x, heap.data() + off + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationX, sizeof(double));
+		std::memcpy(&y, heap.data() + off + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationY, sizeof(double));
+		std::memcpy(&z, heap.data() + off + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationZ, sizeof(double));
+
+		if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) continue;
+		if (std::abs(x) > 5'000'000.0 || std::abs(y) > 5'000'000.0 || std::abs(z) > 5'000'000.0) continue;
+		if (abs(x - groundTruth.x) > kTol || abs(y - groundTruth.y) > kTol || abs(z - groundTruth.z) > kTol) continue;
+		if (matchAddress != 0) return false;
+
+		matchAddress = heapBase + off;
+	}
+
+	if (!matchAddress) return false;
+
+	outSync.x = this->memory.readMemory<double>(matchAddress + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationX);
+	outSync.y = this->memory.readMemory<double>(matchAddress + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationY);
+	outSync.z = this->memory.readMemory<double>(matchAddress + Offsets::SWorld::SLevel::SActor::SMoverComponent::SSyncHeap::SDefaultSyncState::LocationZ);
+
+	return true;
+}
+
+PlayerLocationRead MecchaChameleon::readPlayerLocation(uintptr_t pawn) {
+	PlayerLocationRead result{};
+
+	if (!isValidPtr(pawn)) return result;
+
+	uintptr_t root = this->memory.readMemory<uintptr_t>(pawn + Offsets::SWorld::SLevel::SActor::RootComponent);
+	if (!isValidPtr(root)) return result;
+
+	result.relativeLocation = readRelativeLocation(root);
+	result.worldLocation = readWorldLocation(pawn);
+
+	result.hasWorldLocation = std::isfinite(result.worldLocation.x) && std::isfinite(result.worldLocation.y) && std::isfinite(result.worldLocation.z) && !(result.worldLocation.x == 0.0 && result.worldLocation.y == 0.0 && result.worldLocation.z == 0.0);
+	if (result.hasWorldLocation) result.hasMoverSync = tryReadMoverSyncLocation(pawn, result.worldLocation, result.moverSyncLocation);
+	
+	return result;
+}
+
 FTransformD MecchaChameleon::readTransform(uintptr_t address)
 {
 	FTransformD transform{};
 
-	if (!isValidPtr(address))
-		return transform;
+	if (!isValidPtr(address)) return transform;
 
 	transform.rotation = this->memory.readMemory<FQuat>(address + 0x00);
 	transform.translation = this->memory.readMemory<FVectorD>(address + 0x20);
@@ -230,13 +301,11 @@ std::vector<FVectorD> MecchaChameleon::readSkeletonBones(uintptr_t mesh) {
 
 	std::vector<FVectorD> bones;
 
-	if (!isValidPtr(mesh))
-		return bones;
+	if (!isValidPtr(mesh)) return bones;
 
 	TArray transforms = this->readBoneTransforms(mesh);
 
-	if (!isValidTArray(transforms, kSkeletonBoneCount, 256))
-		return bones;
+	if (!isValidTArray(transforms, kSkeletonBoneCount, 256)) return bones;
 
 	FTransformD componentToWorld = this->readTransform(mesh + SMesh::ComponentToWorld);
 	const int boneCount = min(transforms.count, kSkeletonBoneCount);
@@ -246,8 +315,7 @@ std::vector<FVectorD> MecchaChameleon::readSkeletonBones(uintptr_t mesh) {
 	for (int boneIndex = 0; boneIndex < boneCount; boneIndex++) {
 		uintptr_t boneAddress = transforms.data + static_cast<uintptr_t>(boneIndex) * SMesh::BoneTransformStride;
 
-		if (!isValidPtr(boneAddress))
-			break;
+		if (!isValidPtr(boneAddress)) break;
 
 		FTransformD boneComponent = this->readTransform(boneAddress);
 		bones.push_back(this->TransformPosition(componentToWorld, boneComponent.translation));
@@ -262,20 +330,17 @@ bool MecchaChameleon::tryReadTrackedActor(uintptr_t playerState, uintptr_t local
 	using SActor = Offsets::SWorld::SLevel::SActor;
 	using SComponent = Offsets::SWorld::SLevel::SActor::SComponent;
 
-	if (!isValidPtr(playerState))
-		return false;
+	if (!isValidPtr(playerState)) return false;
 
 	std::string playerName = this->memory.readFString(playerState + Offsets::SWorld::SGameState::SPlayerArray::PlayerName);
 
 	uintptr_t pawn = this->memory.readMemory<uintptr_t>(playerState + Offsets::SWorld::SGameState::SPlayerArray::Pawn);
-	if (!isValidPtr(pawn))
-		return false;
+	if (!isValidPtr(pawn)) return false;
 
 	PlayerRole playerRole = this->getRoleFromClass(pawn);
 
 	uintptr_t headPosition = this->memory.readMemory<uintptr_t>(pawn + SPawn::HeadPosition);
-	if (!isValidPtr(headPosition))
-		return false;
+	if (!isValidPtr(headPosition)) return false;
 
 	double headRadius = this->memory.readMemory<double>(headPosition + SHead::HeadRadius);
 	double playerSize = this->memory.readMemory<double>(headPosition + SHead::PlayerSize);
@@ -284,16 +349,15 @@ bool MecchaChameleon::tryReadTrackedActor(uintptr_t playerState, uintptr_t local
 	std::vector<FVectorD> bones = this->readSkeletonBones(mesh);
 
 	uintptr_t rootComponent = this->memory.readMemory<uintptr_t>(pawn + SActor::RootComponent);
-	if (!isValidPtr(rootComponent))
-		return false;
+	if (!isValidPtr(rootComponent)) return false;
 
-	FVector location = this->memory.readMemory<FVector>(rootComponent + SComponent::RelativeLocation);
+	// FVector location = this->memory.readMemory<FVector>(rootComponent + SComponent::RelativeLocation);
 
-	if (location.x == 0 && location.y == 0 && location.z == 0)
-		return false;
+	PlayerLocationRead location = this->readPlayerLocation(pawn);
+	if (!location.hasWorldLocation) return false;
 
 	outActor = {
-		location,
+		location.worldLocation,
 		bones,
 		headRadius,
 		playerSize,
@@ -323,12 +387,10 @@ void MecchaChameleon::clearSnapshot() {
 }
 
 bool MecchaChameleon::updateWorldPointer() {
-	if (!this->gWorldAddress)
-		return false;
+	if (!this->gWorldAddress) return false;
 
 	uintptr_t currentWorld = this->memory.readMemory<uintptr_t>(this->gWorldAddress);
-	if (!currentWorld)
-		return false;
+	if (!currentWorld) return false;
 
 	if (currentWorld != this->world) {
 		this->world = currentWorld;
@@ -365,49 +427,41 @@ void MecchaChameleon::update() {
 
 // Testing. nothing serious yet
 void MecchaChameleon::applyFlatChams(uintptr_t pawn) {
-	if (!pawn)
-		return;
+	if (!pawn) return;
 
 	uintptr_t mesh = this->memory.readMemory<uintptr_t>(
 		pawn + Offsets::SWorld::SGameState::SPlayerArray::SPawn::Mesh
 	);
 
-	if (!mesh)
-		return;
+	if (!mesh) return;
 
 	TArray overrideMaterials = this->memory.readMemory<TArray>(mesh + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SMesh::OverrideMaterials);
 
-	if (!overrideMaterials.data || overrideMaterials.count <= 0 || overrideMaterials.count > 8)
-		return;
+	if (!overrideMaterials.data || overrideMaterials.count <= 0 || overrideMaterials.count > 8) return;
 
 	uintptr_t slot = overrideMaterials.data;
 	uintptr_t material = this->memory.readMemory<uintptr_t>(slot);
 
-	if (!material)
-		return;
+	if (!material) return;
 
 	std::string materialName = this->getNameByPtr(material);
 
-	if (materialName == "M_PaintTarget")
-		return;
+	if (materialName == "M_PaintTarget") return;
 
 	uintptr_t parentMaterial = this->memory.readMemory<uintptr_t>(material + Offsets::SWorld::SGameState::SPlayerArray::SPawn::SMesh::SMaterial::ParentMaterial);
 
-	if (!parentMaterial)
-		return;
+	if (!parentMaterial) return;
 
 	std::string parentName = this->getNameByPtr(parentMaterial);
 
-	if (parentName != "M_PaintTarget")
-		return;
+	if (parentName != "M_PaintTarget") return;
 
 	this->memory.writeMemory<uintptr_t>(slot, parentMaterial);
 }
 
 bool MecchaChameleon::refresh() {
 	if (!this->chainResolved) return false;
-	if (!isValidPtr(this->gameState) || !isValidPtr(this->cameraManager) || !isValidPtr(this->playerController))
-		return false;
+	if (!isValidPtr(this->gameState) || !isValidPtr(this->cameraManager) || !isValidPtr(this->playerController)) return false;
 
 	uintptr_t localPawn = this->memory.readMemory<uintptr_t>(
 		this->playerController + Offsets::SWorld::SGameInstance::SLocalPlayers::SPlayerController::LocalPawn
@@ -433,8 +487,7 @@ bool MecchaChameleon::refresh() {
 		uintptr_t playerState = this->memory.readMemory<uintptr_t>(playerArray.data + playerIndex * sizeof(uintptr_t));
 		TrackedActor actor{};
 
-		if (!this->tryReadTrackedActor(playerState, localPawn, localRole, actor))
-			continue;
+		if (!this->tryReadTrackedActor(playerState, localPawn, localRole, actor)) continue;
 
 		newActors.push_back(actor);
 	}
