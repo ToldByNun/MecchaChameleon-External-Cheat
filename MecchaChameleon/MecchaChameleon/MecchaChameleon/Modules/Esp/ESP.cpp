@@ -1,6 +1,5 @@
 #include "ESP.hpp"
 #include "../../Engine/ImGui/imgui.h"
-#include "../../Manager/Globals/Globals.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -30,134 +29,6 @@ void drawOutlinedLine(ImDrawList* drawList, ImVec2 from, ImVec2 to, ImU32 color)
 	drawList->AddLine(from, to, color, 2.0f);
 }
 
-// pretty much just helpers. u can ignore these (except if u want to paste bones kekw)
-namespace {
-	constexpr int kHeadBone = 6;
-	constexpr int kHeadEndBone = 7;
-
-	constexpr std::pair<int, int> skeletonPairs[] = {
-		{ 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
-		{ 5,  8 }, { 8,  9 }, { 9, 10 }, { 10, 11 },
-		{ 5, 13 }, { 13, 14 }, { 14, 15 }, { 15, 16 },
-		{ 2, 18 }, { 18, 19 }, { 19, 20 }, { 20, 21 },
-		{ 2, 23 }, { 23, 24 }, { 24, 25 }, { 25, 26 },
-	};
-
-	struct ActorScreenBounds {
-		float top = 0.f;
-		float bottom = 0.f;
-		float left = 0.f;
-		float right = 0.f;
-		bool valid = false;
-	};
-
-	FVector boneToVector(const FVectorD& bone) {
-		return FVector{
-			static_cast<float>(bone.x),
-			static_cast<float>(bone.y),
-			static_cast<float>(bone.z)
-		};
-	}
-
-	bool tryGetActorScreenBounds(
-		Unreal& unreal,
-		const TrackedActor& actor,
-		const FMinimalViewInfo& viewInfo,
-		float screenWidth,
-		float screenHeight,
-		ActorScreenBounds& outBounds
-	) {
-		if (actor.boneList.size() < kSkeletonBoneCount)
-			return false;
-
-		float minX = FLT_MAX;
-		float maxX = -FLT_MAX;
-		float minY = FLT_MAX;
-		float maxY = -FLT_MAX;
-		bool anyVisible = false;
-
-		for (const FVectorD& bone : actor.boneList) {
-			FVector2D screenPos;
-			if (!unreal.WorldToScreen(viewInfo, boneToVector(bone), screenPos, screenWidth, screenHeight))
-				continue;
-
-			anyVisible = true;
-			minX = min(minX, static_cast<float>(screenPos.x));
-			maxX = max(maxX, static_cast<float>(screenPos.x));
-			minY = min(minY, static_cast<float>(screenPos.y));
-			maxY = max(maxY, static_cast<float>(screenPos.y));
-		}
-
-		if (!anyVisible)
-			return false;
-
-		constexpr float padding = 3.f;
-		outBounds.left = minX - padding;
-		outBounds.right = maxX + padding;
-		outBounds.top = minY - padding;
-		outBounds.bottom = maxY + padding;
-		outBounds.valid = true;
-		return true;
-	}
-
-	bool tryGetLegacyActorScreenBounds(
-		Unreal& unreal,
-		const TrackedActor& actor,
-		const FMinimalViewInfo& viewInfo,
-		float screenWidth,
-		float screenHeight,
-		ActorScreenBounds& outBounds
-	) {
-		FVector2D screenBottom;
-		FVector2D screenTop;
-
-		const bool visibleBottom = unreal.WorldToScreen(
-			viewInfo,
-			actor.location - FVector(0, 0, actor.playerSize),
-			screenBottom,
-			screenWidth,
-			screenHeight
-		);
-
-		const bool visibleTop = unreal.WorldToScreen(
-			viewInfo,
-			actor.location + FVector(0, 0, actor.playerSize),
-			screenTop,
-			screenWidth,
-			screenHeight
-		);
-
-		if (!visibleBottom || !visibleTop)
-			return false;
-
-		const float height2D = std::abs(screenTop.y - screenBottom.y);
-		const float width2D = height2D * 0.55f;
-		const float centerX = screenBottom.x;
-
-		outBounds.top = screenTop.y;
-		outBounds.bottom = screenBottom.y;
-		outBounds.left = centerX - width2D * 0.5f;
-		outBounds.right = centerX + width2D * 0.5f;
-		outBounds.valid = true;
-		return true;
-	}
-
-	bool tryGetActorScreenBoundsForEsp(
-		Unreal& unreal,
-		const TrackedActor& actor,
-		const FMinimalViewInfo& viewInfo,
-		float screenWidth,
-		float screenHeight,
-		bool dynamicBoxes,
-		ActorScreenBounds& outBounds
-	) {
-		if (dynamicBoxes)
-			return tryGetActorScreenBounds(unreal, actor, viewInfo, screenWidth, screenHeight, outBounds);
-
-		return tryGetLegacyActorScreenBounds(unreal, actor, viewInfo, screenWidth, screenHeight, outBounds);
-	}
-}
-
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	if (globals.settings.esp.box)
 		this->renderBox(actors, viewInfo);
@@ -183,6 +54,9 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 
 	if (globals.settings.esp.fovCircle)
 		this->renderFoV(globals.settings.aimbot.fov);
+
+	if (globals.settings.esp.minimap)
+		this->renderMinimap(actors, viewInfo);
 }
 
 void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -551,4 +425,95 @@ void ESP::renderFoV(float fov) {
 
 	drawList->AddCircle(displayMiddle, fov, ImColor(0, 0, 0, 255), 64, 3.0f);
 	drawList->AddCircle(displayMiddle, fov, ImColor(255, 255, 255, 255), 64, 1.0f);
+}
+
+void ESP::renderMinimap(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+
+	const ImVec2 mapMin(
+		displaySize.x - kMinimapPadding - kMinimapSize,
+		kMinimapPadding
+	);
+	const ImVec2 mapMax(
+		displaySize.x - kMinimapPadding,
+		kMinimapPadding + kMinimapSize
+	);
+	const ImVec2 center(
+		(mapMin.x + mapMax.x) * 0.5f,
+		(mapMin.y + mapMax.y) * 0.5f
+	);
+	const float halfSize = kMinimapSize * 0.5f;
+	const float scale = halfSize / kMinimapWorldRange;
+	const float playerYawRadians = static_cast<float>(viewInfo.Rotation.Yaw * (kPi / 180.0));
+
+	drawList->AddRectFilled(
+		mapMin,
+		mapMax,
+		IM_COL32(64, 64, 64, 210),
+		0.f
+	);
+	drawList->AddRect(
+		mapMin,
+		mapMax,
+		IM_COL32(0, 0, 0, 255),
+		0.f,
+		ImDrawFlags_None,
+		1.f
+	);
+
+	drawList->AddLine(
+		ImVec2(mapMin.x, center.y),
+		ImVec2(mapMax.x, center.y),
+		IM_COL32(24, 24, 24, 255),
+		1.f
+	);
+	drawList->AddLine(
+		ImVec2(center.x, mapMin.y),
+		ImVec2(center.x, mapMax.y),
+		IM_COL32(24, 24, 24, 255),
+		1.f
+	);
+
+	const float halfFovRadians = viewInfo.FOV * 0.5f * (kPi / 180.f);
+	const float forwardAngle = -kPi * 0.5f;
+	const ImVec2 fovLeft(
+		center.x + std::cos(forwardAngle - halfFovRadians) * halfSize,
+		center.y + std::sin(forwardAngle - halfFovRadians) * halfSize
+	);
+	const ImVec2 fovRight(
+		center.x + std::cos(forwardAngle + halfFovRadians) * halfSize,
+		center.y + std::sin(forwardAngle + halfFovRadians) * halfSize
+	);
+
+	drawList->AddLine(center, fovLeft, IM_COL32(24, 24, 24, 255), 1.f);
+	drawList->AddLine(center, fovRight, IM_COL32(24, 24, 24, 255), 1.f);
+
+	FVector localLocation = viewInfo.Location;
+	tryGetLocalPlayer(actors, localLocation);
+
+	for (const TrackedActor& actor : actors) {
+		if (!shouldShowOnMinimap(actor)) continue;
+
+		const double deltaX = actor.location.x - localLocation.x;
+		const double deltaY = actor.location.y - localLocation.y;
+		const float distance = std::sqrt(static_cast<float>(deltaX * deltaX + deltaY * deltaY));
+
+		if (distance > kMinimapWorldRange) continue;
+
+		const ImVec2 mapPos = worldDeltaToMinimap(deltaX, deltaY, playerYawRadians, center, scale);
+		if (mapPos.x < mapMin.x || mapPos.x > mapMax.x || mapPos.y < mapMin.y || mapPos.y > mapMax.y) continue;
+
+		const ImU32 actorColor = getMinimapActorColor(actor);
+		drawList->AddCircleFilled(mapPos, 2.5f, actorColor);
+
+		const float facingRadians = getActorFacingRadians(actor);
+		drawDirectionArrow(
+			drawList,
+			mapPos,
+			facingRadians,
+			playerYawRadians,
+			IM_COL32(255, 220, 0, 255)
+		);
+	}
 }

@@ -10,28 +10,33 @@ class ESP;
 class Aimbot;
 
 struct EspSettings {
+    bool fovCircle = false;
     bool box = false;
     bool corners = false;
     ImVec4 defaultBoxColor = Custom::ColorFromHex(0xFFFFFF);
     ImVec4 enemyBoxColor = Custom::ColorFromHex(0x9966ff);
     bool dynamicBoxes = false;
-    bool skeleton = true;
+    bool skeleton = false;
     ImVec4 defaultSkeletonColor = Custom::ColorFromHex(0xFFFFFF);
     ImVec4 enemySkeletonColor = Custom::ColorFromHex(0xFFFFFF);
+    bool chineseHat = false;
     bool name = false;
     bool distance = false;
     bool snaplines = false;
     ImVec4 defaultSnaplineColor = Custom::ColorFromHex(0xFFFFFF);
     ImVec4 enemySnaplineColor = Custom::ColorFromHex(0x9966ff);
-    bool chineseHat = false;
-    bool fovCircle = false;
+    bool minimap = false;
 
     // options
     int selectedTeam = 0;
     bool onlyEnemies = false;
     bool isTeammateColorEnabled = false;
+    bool hideEnemiesMM = false;
+    bool hideTeammatesMM = false;
+    ImVec4 defaultMMColor = Custom::ColorFromHex(0xFFFFFF);
+    ImVec4 enemyMMColor = Custom::ColorFromHex(0x9966ff);
 
-    bool devMode = true;
+    bool devMode = false;
 };
 
 struct AimbotSettings {

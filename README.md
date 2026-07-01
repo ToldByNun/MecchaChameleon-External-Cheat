@@ -4,7 +4,7 @@
 
 ![C++](https://img.shields.io/badge/C++-20-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Version](https://img.shields.io/badge/version-v0.0.2-green)
+![Version](https://img.shields.io/badge/version-v0.0.3-green)
 ![Engine](https://img.shields.io/badge/engine-Unreal%20Engine-black)
 
 </div>
@@ -15,9 +15,9 @@
 
 <div align="center">
 
-<img src="Assets/preview.png" alt="MecchaChameleon v0.0.2 — custom ImGui menu with Combat and Visuals categories" width="600"/>
+<img src="Assets/preview.png" alt="MecchaChameleon v0.0.3 — minimap, color pickers, and dynamic ESP boxes" width="725"/>
 
-<sub>Custom ImGui menu · <b>Combat</b> / <b>Visuals</b> categories · toggle with <b>INSERT</b></sub>
+<sub>Minimap radar · per-feature <b>ColorPicker</b> · <b>Combat</b> / <b>Visuals</b> · toggle with <b>INSERT</b></sub>
 
 </div>
 
@@ -29,7 +29,7 @@ External cheat for **MecchaChameleon** (UE5) — built for **memory research and
 
 The tool runs out-of-process: no injection, no hooks. It attaches to the game's shipping executable, scans for `GWorld` / `GNames` via AOB patterns with RIP-relative resolution, and walks core Unreal structures (world chain, `GameState` player array, skeletal mesh bones, head/capsule sizing, camera POV) to understand how runtime state is laid out in memory. A transparent DXGI overlay (DirectX 11 + ImGui) renders on top of the game window.
 
-> **v0.0.2** — skeleton ESP (28-bone rig), corner ESP, FoV circle overlay, combined name/distance labels, aimbot with target lock + `SendInput` relative mouse movement, pointer validation on all runtime reads, and refactored actor/bone snapshot pipeline.
+> **v0.0.3** — minimap radar with facing arrows, dynamic bone-fitted ESP boxes, per-feature **ColorPicker** + team **Dropdown**, Chinese hat with head-bone orientation, and shared screen-bounds helpers for box/corner ESP. Includes skeleton, corner ESP, FoV circle, aimbot target-lock, and world-pointer re-resolution from prior releases.
 
 <br/>
 
@@ -70,16 +70,20 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 | **Overlay** | Transparent Win32 window, DXGI 11, ImGui render loop | done |
 | **World re-resolution** | Monitors `GWorld` address vs value; re-walks chain on world change | done |
 | **Menu** | Custom ImGui widgets, **Combat** / **Visuals** categories, dual-section layout | done |
-| **Box ESP** | 2D bounding box from projected foot/head using `playerSize` | done |
-| **Corner ESP** | Corner-style box overlay | done |
+| **Box ESP** | 2D bounding box — legacy foot/head sizing or dynamic bone bounds | done |
+| **Dynamic boxes** | Fit box/corners to projected skeleton bone extents | done |
+| **Corner ESP** | Corner-style box overlay (shared bounds with box ESP) | done |
 | **Skeleton ESP** | 28-bone wireframe (spine, arms, legs — no end bones) | done |
 | **Snaplines ESP** | Lines from screen bottom-center to projected actor feet | done |
 | **Name / distance** | Player name, distance in metres, or combined `name / Xm` label | done |
 | **FoV circle** | Crosshair-radius circle (shared size with aimbot FOV slider) | done |
+| **Minimap** | Top-right radar — yaw-rotated, FOV wedge, facing arrows, per-team dots | done |
+| **ESP colors** | `ColorPicker` per element (box / skeleton / snaplines / minimap) + team dropdown | done |
 | **Team filter** | Hunter / Survivor / Spectator role detection, hide teammates | done |
-| **Enemy box colors** | Optional red tint for non-teammates | done |
+| **Enemy colors** | Separate default vs enemy colour per ESP element | done |
 | **Aimbot** | Closest-to-crosshair, target lock, FOV limit, smoothing, RMB hold | done |
-| **Chinese hat** | RGB cone overlay — in menu, still experimental | WIP |
+| **Chinese hat** | Head-bone oriented RGB cone — menu toggle, scales with `headRadius` | done |
+| **Dev mode** | `esp.devMode` — bypasses local-player / filter checks for RE testing | done |
 | **Flat chams** | Experimental material swap via `writeMemory` — not in menu | WIP |
 
 ---
@@ -88,10 +92,10 @@ The tool runs out-of-process: no injection, no hooks. It attaches to the game's 
 
 | Feature | Description |
 |:--------|:------------|
-| **Bone-based aim** | Aim at configurable bone index instead of head capsule |
+| **Bone-based aim** | Aim at configurable bone index instead of root/head capsule |
 | **Visibility check** | Skip actors behind geometry when trace data exists |
-| **Chinese hat polish** | Stabilise positioning / enable by default |
 | **Flat chams** | Menu toggle + safer material swap path |
+| **Config persistence** | Save / load `AppSettings` to disk |
 
 ---
 
@@ -164,7 +168,9 @@ Module scan (AOB)
                                     └── RootComponent → RelativeLocation
 ```
 
-**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` (always, incl. FoV circle) → `Aimbot::onAimbot()` when actors present → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
+**Runtime loop (`main.cpp`):** sync overlay to game window → poll input → read snapshot → ImGui frame → `ESP::renderESP()` (box/corners/skeleton/labels/snaplines/chinese hat/FoV circle/minimap) → `Aimbot::onAimbot()` when actors present → present. Shared state lives in `globals` (`Manager/Globals/Globals.hpp`).
+
+**Minimap:** 160×160 px radar (top-right). Rotates with camera yaw, draws local FOV wedge, plots actors within 12 000 uu with directional arrows derived from head bones. Per-team dot colours + optional hide filters.
 
 **Aimbot behaviour:**
 
@@ -203,7 +209,7 @@ MecchaChameleon/                          # repo / solution root
         │   ├── MecchaChameleon/          # core module (init, update, snapshot)
         │   ├── Unreal/                   # WorldToScreen
         │   └── ImGui/                    # vendored Dear ImGui + DX11/Win32 backends
-        │       └── Custom/               # themed widgets (MainGui, TopBar, Toggle, Slider, …)
+        │       └── Custom/               # themed widgets (MainGui, TopBar, Toggle, Slider, ColorPicker, Dropdown, …)
         └── Modules/
             ├── Overlay/                  # transparent DXGI overlay window
             ├── Menu/                     # ImGui menu
@@ -267,9 +273,11 @@ If an AOB pattern fails to match after a game update, update the patterns in `of
 
 **Combat** — aimbot enable, FOV limit, smoothing (+ sliders when toggled on).
 
-**Visuals** — box, corners, skeleton, snaplines, name, distance, FoV circle, chinese hat (+ hide teammates / enemy colour in options). Enable both **Name** and **Distance** for combined `PlayerName / 12m` labels. **Show FoV** exposes the radius slider in options.
+**Visuals** — FoV circle, minimap, box, corners, dynamic boxes, skeleton, chinese hat, name, distance, snaplines (+ per-element colour pickers). **Options** — team dropdown (edit enemy vs teammate colours), hide teammates, hide enemies/teammates on minimap, minimap colour.
 
-Footer shows current version (`0.0.2`).
+Enable both **Name** and **Distance** for combined `PlayerName / 12m` labels. **Dynamic Boxes** fits box/corner bounds to projected bone extents instead of the legacy foot/head height estimate.
+
+Footer shows current version (`0.0.3`).
 
 ---
 
@@ -346,8 +354,12 @@ Defined in `offsets.hpp`. Struct offsets are version-specific — re-derive afte
 - [x] Name / distance labels (combined mode)
 - [x] Snaplines
 - [x] FoV circle
-- [x] Team filter & enemy box colors
-- [ ] Chinese hat polish
+- [x] Dynamic boxes (bone-fitted bounds)
+- [x] Minimap radar
+- [x] Per-feature colour pickers + team dropdown
+- [x] Team filter & enemy/default colours
+- [x] Chinese hat (head-bone oriented)
+- [ ] Config persistence
 
 **Aimbot**
 

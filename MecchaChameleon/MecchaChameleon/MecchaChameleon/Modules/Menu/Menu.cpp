@@ -30,6 +30,7 @@ static void renderColorWidget(const char* name, ImVec4& defaultColor, ImVec4& en
 
 static void renderEspSettings() {
 	Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
+	Custom::Toggle("Minimap", &globals.settings.esp.minimap);
 	Custom::Toggle("Box ESP", &globals.settings.esp.box);
 	Custom::Toggle("Corner ESP", &globals.settings.esp.corners);
 	renderColorWidget("Box Color", globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor);
@@ -45,10 +46,11 @@ static void renderEspSettings() {
 
 static void renderEspOptions() {
 	Custom::Dropdown("Team", &globals.settings.esp.selectedTeam, teamOptions, IM_ARRAYSIZE(teamOptions));
-	if (globals.settings.esp.fovCircle)
-		Custom::SliderFloat("FoV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
 	Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);
 	Custom::Toggle("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
+	Custom::Toggle("Hide Enemies MM", &globals.settings.esp.hideEnemiesMM);
+	Custom::Toggle("Hide Teammates MM", &globals.settings.esp.hideTeammatesMM);
+	renderColorWidget("Minimap Color", globals.settings.esp.defaultMMColor, globals.settings.esp.enemyMMColor);
 }
 
 static void renderAimbotSettings() {
@@ -126,6 +128,6 @@ void Menu::render() {
 	ImGui::EndChild();
 	ImGui::PopStyleColor();
 
-	Custom::FooterBar("0.0.2", footerPreset);
+	Custom::FooterBar("0.0.3", footerPreset);
 	Custom::EndMainGui();
 }
