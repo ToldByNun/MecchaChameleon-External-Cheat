@@ -111,6 +111,33 @@ GuiPresets MakeDefaultPresets() {
 	presets.dropdown.itemHeight = 22.f;
 	presets.dropdown.arrowWidth = 18.f;
 
+	presets.multiCombo.labelColor = ColorFromHex(0xE8E8E8);
+	presets.multiCombo.boxBackground = ColorFromHex(0x101010);
+	presets.multiCombo.boxBorder = ColorFromHex(0x292929);
+	presets.multiCombo.boxBorderHovered = ColorFromHex(0xC46B84);
+	presets.multiCombo.boxBorderOpen = ColorFromHex(0xC46B84);
+	presets.multiCombo.textColor = ColorFromHex(0xE8E8E8);
+	presets.multiCombo.textSelected = ColorFromHex(0xE8E8E8);
+	presets.multiCombo.textHovered = ColorFromHex(0xFFFFFF);
+	presets.multiCombo.popupBackground = ColorFromHex(0x141414);
+	presets.multiCombo.popupBorder = ColorFromHex(0x292929);
+	presets.multiCombo.itemHighlight = ColorFromHex(0x212122);
+	presets.multiCombo.arrowColor = ColorFromHex(0x6E6E6E);
+	presets.multiCombo.checkBorder = ColorFromHex(0x292929);
+	presets.multiCombo.checkBorderHovered = ColorFromHex(0xC46B84);
+	presets.multiCombo.checkFill = ColorFromHex(0xC46B84);
+	presets.multiCombo.rowHeight = 28.f;
+	presets.multiCombo.boxHeight = 22.f;
+	presets.multiCombo.spacing = 8.f;
+	presets.multiCombo.rounding = 2.f;
+	presets.multiCombo.popupRounding = 2.f;
+	presets.multiCombo.itemHeight = 22.f;
+	presets.multiCombo.arrowWidth = 18.f;
+	presets.multiCombo.checkSize = 12.f;
+	presets.multiCombo.checkSpacing = 8.f;
+	presets.multiCombo.checkRounding = 2.f;
+	presets.multiCombo.checkFillInset = 2.f;
+
 	presets.colorPicker.labelColor = ColorFromHex(0xE8E8E8);
 	presets.colorPicker.previewBorder = ColorFromHex(0x292929);
 	presets.colorPicker.previewBorderHovered = ColorFromHex(0xC46B84);

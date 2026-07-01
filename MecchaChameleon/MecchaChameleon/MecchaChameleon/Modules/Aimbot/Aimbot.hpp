@@ -15,9 +15,10 @@ public:
 
 private:
 	bool isInFoV(const TrackedActor& actor, const FMinimalViewInfo& viewInfo);
-	bool getActorHeadScreenPos(const TrackedActor& actor, const FMinimalViewInfo& viewInfo, FVector2D& outHeadPosition2D);
-	bool getClosestTargetToCursor(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo, FVector2D& outHeadPosition2D);
-	FVector2D applyAimSmoothing(const FVector2D& headPosition2D);
+	bool getBoneScreenPos(const TrackedActor& actor, int boneIndex, const FMinimalViewInfo& viewInfo, FVector2D& outScreenPos);
+	bool getActorAimScreenPos(const TrackedActor& actor, const FMinimalViewInfo& viewInfo, FVector2D& outAimPosition2D);
+	bool getClosestTargetToCursor(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo, FVector2D& outAimPosition2D);
+	FVector2D applyAimSmoothing(const FVector2D& aimPosition2D);
 
 	uintptr_t lockedPawn = 0;
 };

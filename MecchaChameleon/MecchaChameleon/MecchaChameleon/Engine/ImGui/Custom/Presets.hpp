@@ -118,6 +118,35 @@ struct DropdownPreset {
 	float arrowWidth = 18.f;
 };
 
+struct MultiComboPreset {
+	ImVec4 labelColor{};
+	ImVec4 boxBackground{};
+	ImVec4 boxBorder{};
+	ImVec4 boxBorderHovered{};
+	ImVec4 boxBorderOpen{};
+	ImVec4 textColor{};
+	ImVec4 textSelected{};
+	ImVec4 textHovered{};
+	ImVec4 popupBackground{};
+	ImVec4 popupBorder{};
+	ImVec4 itemHighlight{};
+	ImVec4 arrowColor{};
+	ImVec4 checkBorder{};
+	ImVec4 checkBorderHovered{};
+	ImVec4 checkFill{};
+	float rowHeight = 28.f;
+	float boxHeight = 22.f;
+	float spacing = 8.f;
+	float rounding = 2.f;
+	float popupRounding = 2.f;
+	float itemHeight = 22.f;
+	float arrowWidth = 18.f;
+	float checkSize = 12.f;
+	float checkSpacing = 8.f;
+	float checkRounding = 2.f;
+	float checkFillInset = 2.f;
+};
+
 struct ColorPickerPreset {
 	ImVec4 labelColor{};
 	ImVec4 previewBorder{};
@@ -143,6 +172,7 @@ struct GuiPresets {
 	TogglePreset toggle{};
 	SliderPreset slider{};
 	DropdownPreset dropdown{};
+	MultiComboPreset multiCombo{};
 	ColorPickerPreset colorPicker{};
 };
 

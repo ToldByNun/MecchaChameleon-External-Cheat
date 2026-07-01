@@ -17,16 +17,17 @@ enum LabelType {
 // pretty much just helpers. u can ignore these (except if u want to paste bones kekw)
 // in hpp because boilerplate
 namespace {
-	// Skeleton
-	constexpr int kHeadBone = 6;
-	constexpr int kHeadEndBone = 7;
-
 	constexpr std::pair<int, int> skeletonPairs[] = {
-		{ 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
-		{ 5,  8 }, { 8,  9 }, { 9, 10 }, { 10, 11 },
-		{ 5, 13 }, { 13, 14 }, { 14, 15 }, { 15, 16 },
-		{ 2, 18 }, { 18, 19 }, { 19, 20 }, { 20, 21 },
-		{ 2, 23 }, { 23, 24 }, { 24, 25 }, { 25, 26 },
+		{ SPINE1, SPINE2 }, { SPINE2, SPINE3 },
+		{ SPINE3, NECK }, { NECK, HEAD },
+		{ NECK, SHOULDER_L }, { SHOULDER_L, UPPER_ARM_L },
+		{ UPPER_ARM_L, LOWER_ARM_L }, { LOWER_ARM_L, HAND_L },
+		{ NECK, SHOULDER_R }, { SHOULDER_R, UPPER_ARM_R },
+		{ UPPER_ARM_R, LOWER_ARM_R }, { LOWER_ARM_R, HAND_R },
+		{ SPINE1, HIP_L }, { HIP_L, UPPER_LEG_L },
+		{ UPPER_LEG_L, LOWER_LEG_L }, { LOWER_LEG_L, FOOT_L },
+		{ SPINE1, HIP_R }, { HIP_R, UPPER_LEG_R },
+		{ UPPER_LEG_R, LOWER_LEG_R }, { LOWER_LEG_R, FOOT_R },
 	};
 
 	struct ActorScreenBounds {
@@ -180,9 +181,9 @@ namespace {
 	}
 
 	float getActorFacingRadians(const TrackedActor& actor) {
-		if (actor.boneList.size() > kHeadEndBone) {
-			const double dx = actor.boneList[kHeadEndBone].x - actor.boneList[kHeadBone].x;
-			const double dy = actor.boneList[kHeadEndBone].y - actor.boneList[kHeadBone].y;
+		if (actor.boneList.size() > HEAD_END) {
+			const double dx = actor.boneList[HEAD_END].x - actor.boneList[HEAD].x;
+			const double dy = actor.boneList[HEAD_END].y - actor.boneList[HEAD].y;
 
 			if (std::abs(dx) > 0.01 || std::abs(dy) > 0.01)
 				return static_cast<float>(std::atan2(dy, dx));

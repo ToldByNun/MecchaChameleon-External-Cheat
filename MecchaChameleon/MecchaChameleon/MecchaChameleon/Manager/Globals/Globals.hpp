@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Engine/ImGui/Custom/ColorPicker.hpp"
+#include "../../Engine/types.hpp"
 
 class ClassManager;
 class MecchaChameleon;
@@ -46,6 +47,7 @@ struct AimbotSettings {
     float fov = 90.f;
     float smooth = 5.f;
     int keybind = 2; // WinUser.h:465 - RightClick
+    unsigned int hitboxMask = HitboxHead;
 };
 
 struct AppSettings {

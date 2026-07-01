@@ -143,6 +143,7 @@
   <ItemGroup>
     <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\ColorPicker.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Dropdown.cpp" />
+    <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\MultiCombo.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\FooterBar.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\MainGui.cpp" />
     <ClCompile Include="MecchaChameleon\Engine\ImGui\Custom\Presets.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="MecchaChameleon\Engine\helpers.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\ColorPicker.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Dropdown.hpp" />
+    <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\MultiCombo.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\FooterBar.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\MainGui.hpp" />
     <ClInclude Include="MecchaChameleon\Engine\ImGui\Custom\Presets.hpp" />

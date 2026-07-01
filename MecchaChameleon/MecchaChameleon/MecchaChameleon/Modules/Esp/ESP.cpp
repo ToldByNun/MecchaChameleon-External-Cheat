@@ -325,14 +325,14 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 		if (actor.boneList.size() < kSkeletonBoneCount) continue;
 
-		const FVector headWorld = boneToVector(actor.boneList[kHeadBone]);
+		const FVector headWorld = boneToVector(actor.boneList[HEAD]);
 		const float hatRadius = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 1.1) : 30.f;
 		const float hatHeight = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 0.55) : 15.f;
 		const float hatVerticalOffset = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 0.45) : 14.f;
 
 		FVector hatUp{ 0.f, 0.f, 1.f };
-		if (actor.boneList.size() > kHeadEndBone) {
-			const FVector headEndWorld = boneToVector(actor.boneList[kHeadEndBone]);
+		if (actor.boneList.size() > HEAD_END) {
+			const FVector headEndWorld = boneToVector(actor.boneList[HEAD_END]);
 			const FVector delta = headEndWorld - headWorld;
 			const float length = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
 

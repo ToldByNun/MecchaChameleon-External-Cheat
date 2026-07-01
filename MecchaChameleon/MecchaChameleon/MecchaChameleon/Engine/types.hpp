@@ -137,4 +137,74 @@ static FVectorD RotateVector(const FQuat& q, const FVectorD& v)
 inline constexpr int kSkeletonBoneCount = 28;
 inline constexpr int kMaxTrackedPlayers = 128;
 
+enum BoneParts {
+	AMM,
+	LOOT,
+	SPINE1,
+	SPINE2,
+	SPINE3,
+	NECK,
+	HEAD,
+	HEAD_END,
+	SHOULDER_L,
+	UPPER_ARM_L,
+	LOWER_ARM_L,
+	HAND_L,
+	HAND_L_END,
+	SHOULDER_R,
+	UPPER_ARM_R,
+	LOWER_ARM_R,
+	HAND_R,
+	HAND_R_END,
+	HIP_L,
+	UPPER_LEG_L,
+	LOWER_LEG_L,
+	FOOT_L,
+	FOOT_L_END,
+	HIP_R,
+	UPPER_LEG_R,
+	LOWER_LEG_R,
+	FOOT_R,
+	FOOT_R_END
+};
+
+// Bit order must match hitboxOptions[] in Menu.cpp.
+enum HitboxFlags : unsigned int {
+	HitboxHead      = 1u << 0,
+	HitboxChest     = 1u << 1,
+	HitboxStomach   = 1u << 2,
+	HitboxHip       = 1u << 3,
+	HitboxLeftArm   = 1u << 4,
+	HitboxRightArm  = 1u << 5,
+	HitboxLeftKnee  = 1u << 6,
+	HitboxRightKnee = 1u << 7,
+};
+
+inline constexpr HitboxFlags kAllHitboxFlags[] = {
+	HitboxHead,
+	HitboxChest,
+	HitboxStomach,
+	HitboxHip,
+	HitboxLeftArm,
+	HitboxRightArm,
+	HitboxLeftKnee,
+	HitboxRightKnee,
+};
+
+inline constexpr int kHitboxFlagCount = sizeof(kAllHitboxFlags) / sizeof(kAllHitboxFlags[0]);
+
+inline constexpr int HitboxFlagToBone(HitboxFlags flag) {
+	switch (flag) {
+	case HitboxHead:      return HEAD;
+	case HitboxChest:     return SPINE3;
+	case HitboxStomach:   return SPINE2;
+	case HitboxHip:       return LOOT;
+	case HitboxLeftArm:   return LOWER_ARM_L;
+	case HitboxRightArm:  return LOWER_ARM_R;
+	case HitboxLeftKnee:  return LOWER_LEG_L;
+	case HitboxRightKnee: return LOWER_LEG_R;
+	default:              return HEAD;
+	}
+}
+
 #endif // ENGINE_TYPES_HPP

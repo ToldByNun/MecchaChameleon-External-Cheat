@@ -11,11 +11,16 @@
 #include "../../Engine/ImGui/Custom/Presets.hpp"
 #include "../../Engine/ImGui/Custom/Dropdown.hpp"
 #include "../../Engine/ImGui/Custom/ColorPicker.hpp"
+#include "../../Engine/ImGui/Custom/MultiCombo.hpp"
 
 static int activeCategory = 0;
 
 static const char* categories[] = { "Combat", "Visuals" };
 static const char* teamOptions[] = { "Enemy", "Teammate" };
+
+static const char* hitboxOptions[] = {
+	"Head", "Chest", "Stomach", "Hip", "Left Arm", "Right Arm", "Left Knee", "Right Knee"
+};
 
 void Menu::handleInput() {
 	if (GetAsyncKeyState(VK_INSERT) & 1)
@@ -60,10 +65,9 @@ static void renderAimbotSettings() {
 }
 
 static void renderAimbotOptions() {
-	if (globals.settings.aimbot.fovLimit)
-		Custom::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
-	if (globals.settings.aimbot.smoothing)
-		Custom::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
+	Custom::MultiCombo("Hitboxes", &globals.settings.aimbot.hitboxMask, hitboxOptions, kHitboxFlagCount);
+	Custom::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
+	Custom::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
 }
 
 void Menu::render() {
