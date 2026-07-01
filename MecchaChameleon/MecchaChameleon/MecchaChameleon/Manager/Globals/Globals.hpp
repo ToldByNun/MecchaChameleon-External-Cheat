@@ -10,7 +10,8 @@ class Aimbot;
 struct EspSettings {
     bool box = false;
     bool corners = false;
-    bool skeleton = false;
+    bool dynamicBoxes = false;
+    bool skeleton = true;
     bool name = false;
     bool distance = false;
     bool snaplines = false;
@@ -18,6 +19,8 @@ struct EspSettings {
     bool fovCircle = false;
     bool onlyEnemies = false;
     bool isTeammateColorEnabled = false;
+
+    bool devMode = true;
 };
 
 struct AimbotSettings {

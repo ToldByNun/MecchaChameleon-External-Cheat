@@ -2,10 +2,15 @@
 #include "../../Engine/ImGui/imgui.h"
 #include "../../Manager/Globals/Globals.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cfloat>
 #include <utility>
 
-bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer) {
+bool isRenderValid(bool sameTeam, bool onlyEnemiesEnabled, bool isLocalPlayer, bool devMode) {
 	if (sameTeam && onlyEnemiesEnabled) return false;
+
+	if (devMode) return true;
 
 	if (isLocalPlayer) return false;
 
@@ -25,14 +30,132 @@ void drawOutlinedLine(ImDrawList* drawList, ImVec2 from, ImVec2 to, ImU32 color)
 	drawList->AddLine(from, to, color, 2.0f);
 }
 
+// pretty much just helpers. u can ignore these (except if u want to paste bones kekw)
 namespace {
+	constexpr int kHeadBone = 6;
+	constexpr int kHeadEndBone = 7;
+
 	constexpr std::pair<int, int> skeletonPairs[] = {
-		{ 0,  1 }, { 1,  2 }, { 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
+		{ 2,  3 }, { 3,  4 }, { 4,  5 }, { 5,  6 },
 		{ 5,  8 }, { 8,  9 }, { 9, 10 }, { 10, 11 },
 		{ 5, 13 }, { 13, 14 }, { 14, 15 }, { 15, 16 },
-		{ 1, 19 }, { 19, 20 }, { 20, 21 },
-		{ 1, 24 }, { 24, 25 }, { 25, 26 },
+		{ 2, 18 }, { 18, 19 }, { 19, 20 }, { 20, 21 },
+		{ 2, 23 }, { 23, 24 }, { 24, 25 }, { 25, 26 },
 	};
+
+	struct ActorScreenBounds {
+		float top = 0.f;
+		float bottom = 0.f;
+		float left = 0.f;
+		float right = 0.f;
+		bool valid = false;
+	};
+
+	FVector boneToVector(const FVectorD& bone) {
+		return FVector{
+			static_cast<float>(bone.x),
+			static_cast<float>(bone.y),
+			static_cast<float>(bone.z)
+		};
+	}
+
+	bool tryGetActorScreenBounds(
+		Unreal& unreal,
+		const TrackedActor& actor,
+		const FMinimalViewInfo& viewInfo,
+		float screenWidth,
+		float screenHeight,
+		ActorScreenBounds& outBounds
+	) {
+		if (actor.boneList.size() < kSkeletonBoneCount)
+			return false;
+
+		float minX = FLT_MAX;
+		float maxX = -FLT_MAX;
+		float minY = FLT_MAX;
+		float maxY = -FLT_MAX;
+		bool anyVisible = false;
+
+		for (const FVectorD& bone : actor.boneList) {
+			FVector2D screenPos;
+			if (!unreal.WorldToScreen(viewInfo, boneToVector(bone), screenPos, screenWidth, screenHeight))
+				continue;
+
+			anyVisible = true;
+			minX = min(minX, static_cast<float>(screenPos.x));
+			maxX = max(maxX, static_cast<float>(screenPos.x));
+			minY = min(minY, static_cast<float>(screenPos.y));
+			maxY = max(maxY, static_cast<float>(screenPos.y));
+		}
+
+		if (!anyVisible)
+			return false;
+
+		constexpr float padding = 3.f;
+		outBounds.left = minX - padding;
+		outBounds.right = maxX + padding;
+		outBounds.top = minY - padding;
+		outBounds.bottom = maxY + padding;
+		outBounds.valid = true;
+		return true;
+	}
+
+	bool tryGetLegacyActorScreenBounds(
+		Unreal& unreal,
+		const TrackedActor& actor,
+		const FMinimalViewInfo& viewInfo,
+		float screenWidth,
+		float screenHeight,
+		ActorScreenBounds& outBounds
+	) {
+		FVector2D screenBottom;
+		FVector2D screenTop;
+
+		const bool visibleBottom = unreal.WorldToScreen(
+			viewInfo,
+			actor.location - FVector(0, 0, actor.playerSize),
+			screenBottom,
+			screenWidth,
+			screenHeight
+		);
+
+		const bool visibleTop = unreal.WorldToScreen(
+			viewInfo,
+			actor.location + FVector(0, 0, actor.playerSize),
+			screenTop,
+			screenWidth,
+			screenHeight
+		);
+
+		if (!visibleBottom || !visibleTop)
+			return false;
+
+		const float height2D = std::abs(screenTop.y - screenBottom.y);
+		const float width2D = height2D * 0.55f;
+		const float centerX = screenBottom.x;
+
+		outBounds.top = screenTop.y;
+		outBounds.bottom = screenBottom.y;
+		outBounds.left = centerX - width2D * 0.5f;
+		outBounds.right = centerX + width2D * 0.5f;
+		outBounds.valid = true;
+		return true;
+	}
+
+	bool tryGetActorScreenBoundsForEsp(
+		Unreal& unreal,
+		const TrackedActor& actor,
+		const FMinimalViewInfo& viewInfo,
+		float screenWidth,
+		float screenHeight,
+		bool dynamicBoxes,
+		ActorScreenBounds& outBounds
+	) {
+		if (dynamicBoxes)
+			return tryGetActorScreenBounds(unreal, actor, viewInfo, screenWidth, screenHeight, outBounds);
+
+		return tryGetLegacyActorScreenBounds(unreal, actor, viewInfo, screenWidth, screenHeight, outBounds);
+	}
 }
 
 void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
@@ -65,47 +188,26 @@ void ESP::renderESP(const std::vector<TrackedActor>& actors, const FMinimalViewI
 void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-	FVector2D screenBottom, screenTop;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 
-		bool bVisibleBottom = this->unreal.WorldToScreen(
-			viewInfo,
-			actor.location - FVector(0, 0, actor.playerSize),
-			screenBottom,
-			displaySize.x,
-			displaySize.y
-		);
+		ActorScreenBounds bounds{};
+		if (!tryGetActorScreenBoundsForEsp(
+			this->unreal, actor, viewInfo, displaySize.x, displaySize.y,
+			globals.settings.esp.dynamicBoxes, bounds
+		))
+			continue;
 
-		bool bVisibleTop = this->unreal.WorldToScreen(
-			viewInfo,
-			actor.location + FVector(0, 0, actor.playerSize),
-			screenTop,
-			displaySize.x,
-			displaySize.y
-		);
-
-		if (!bVisibleBottom || !bVisibleTop) continue;
-
-		float height2D = abs(screenTop.y - screenBottom.y);
-		float width2D = height2D * 0.55f;
-		float centerX = screenBottom.x;
-
-		ImVec2 topLeft = ImVec2(centerX - width2D * 0.5f, screenTop.y);
-		ImVec2 bottomRight = ImVec2(centerX + width2D * 0.5f, screenBottom.y);
+		const ImVec2 topLeft(bounds.left, bounds.top);
+		const ImVec2 bottomRight(bounds.right, bounds.bottom);
 
 		drawList->AddRect(
-			ImVec2(topLeft.x, topLeft.y),
-			ImVec2(bottomRight.x, bottomRight.y),
+			topLeft,
+			bottomRight,
 			IM_COL32(0, 0, 0, 255),
 			0.0f, ImDrawFlags_None, 4.0f
 		);
-
-		// very scuffed but to simplify it:
-		// if isTeammateColorEnabled true and if they are on the same team, then use box color
-		// if they arent on the same team enemyboxcolor
-		// and if isTeammateColorEnabled false, then use default (boxColor)
 
 		drawList->AddRect(
 			topLeft,
@@ -119,40 +221,26 @@ void ESP::renderBox(const std::vector<TrackedActor>& actors, const FMinimalViewI
 void ESP::renderCorners(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-	FVector2D screenBottom, screenTop;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 
-		bool bVisibleBottom = this->unreal.WorldToScreen(
-			viewInfo,
-			actor.location - FVector(0, 0, actor.playerSize),
-			screenBottom,
-			displaySize.x,
-			displaySize.y
-		);
+		ActorScreenBounds bounds{};
+		if (!tryGetActorScreenBoundsForEsp(
+			this->unreal, actor, viewInfo, displaySize.x, displaySize.y,
+			globals.settings.esp.dynamicBoxes, bounds
+		))
+			continue;
 
-		bool bVisibleTop = this->unreal.WorldToScreen(
-			viewInfo,
-			actor.location + FVector(0, 0, actor.playerSize),
-			screenTop,
-			displaySize.x,
-			displaySize.y
-		);
+		const float left = bounds.left;
+		const float right = bounds.right;
+		const float top = bounds.top;
+		const float bottom = bounds.bottom;
+		const float width2D = right - left;
+		const float height2D = bottom - top;
 
-		if (!bVisibleBottom || !bVisibleTop) continue;
-
-		float height2D = abs(screenTop.y - screenBottom.y);
-		float width2D = height2D * 0.55f;
-		float centerX = screenBottom.x;
-
-		float left = centerX - (width2D * 0.5f);
-		float right = centerX + (width2D * 0.5f);
-		float top = screenTop.y;
-		float bottom = screenBottom.y;
-
-		float lineWidth = width2D * 0.25f;
-		float lineHeight = height2D * 0.20f;
+		const float lineWidth = width2D * 0.25f;
+		const float lineHeight = height2D * 0.20f;
 
 		auto drawCorner = [&](float x, float y, float directionX, float directionY) {
 			drawList->AddLine(
@@ -194,7 +282,7 @@ void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimal
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 		if (actor.boneList.size() < kSkeletonBoneCount) continue;
 
 		auto getBoneScreen = [&](int index, FVector2D& out) -> bool {
@@ -214,11 +302,15 @@ void ESP::renderSkeleton(const std::vector<TrackedActor>& actors, const FMinimal
 
 			if (!getBoneScreen(pair.first, from) || !getBoneScreen(pair.second, to)) continue;
 
-			drawOutlinedLine(
-				drawList,
+			const float dx = to.x - from.x;
+			const float dy = to.y - from.y;
+			if ((dx * dx + dy * dy) < 4.0f) continue;
+
+			drawList->AddLine(
 				ImVec2(from.x, from.y),
 				ImVec2(to.x, to.y),
-				getESPColor(actor)
+				IM_COL32(255, 255, 255, 255),
+				1.0f
 			);
 		}
 	}
@@ -230,7 +322,7 @@ void ESP::renderNameDistance(const std::vector<TrackedActor>& actors, const FMin
 	FVector2D screenTop;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 
 		bool bVisibleTop = this->unreal.WorldToScreen(
 			viewInfo,
@@ -317,7 +409,7 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 	int linesDrawn = 0;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
 
 		FVector2D screenPos;
 		if (!this->unreal.WorldToScreen(viewInfo, FVector(actor.location.x, actor.location.y, actor.location.z - actor.playerSize), screenPos, displaySize.x, displaySize.y)) {
@@ -348,7 +440,6 @@ void ESP::renderSnaplines(const std::vector<TrackedActor>& actors, const FMinima
 	}
 }
 
-// this is still very broken, so not integrated into the ui yet.
 void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinimalViewInfo& viewInfo) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
@@ -357,29 +448,81 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 	constexpr float twoPi = 6.28318530718f;
 
 	for (const TrackedActor& actor : actors) {
-		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer)) continue;
+		if (!isRenderValid(actor.sameTeam, globals.settings.esp.onlyEnemies, actor.isLocalPlayer, globals.settings.esp.devMode)) continue;
+		if (actor.boneList.size() < kSkeletonBoneCount) continue;
 
-		FVector baseCenter = actor.location + FVector(0, 0, actor.playerSize * 0.8f);
-		float hatRadius = 35.0f;
-		float hatHeight = 15.0f;
+		const FVector headWorld = boneToVector(actor.boneList[kHeadBone]);
+		const float hatRadius = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 1.1) : 30.f;
+		const float hatHeight = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 0.55) : 15.f;
+		const float hatVerticalOffset = actor.headRadius > 1.0 ? static_cast<float>(actor.headRadius * 0.45) : 14.f;
 
-		FVector tipWorld = baseCenter + FVector(0, 0, 15);
+		FVector hatUp{ 0.f, 0.f, 1.f };
+		if (actor.boneList.size() > kHeadEndBone) {
+			const FVector headEndWorld = boneToVector(actor.boneList[kHeadEndBone]);
+			const FVector delta = headEndWorld - headWorld;
+			const float length = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+
+			if (length > 1.f) {
+				hatUp = FVector(delta.x / length, delta.y / length, delta.z / length);
+			}
+		}
+
+		const FVector hatOrigin = headWorld + FVector(
+			hatUp.x * hatVerticalOffset,
+			hatUp.y * hatVerticalOffset,
+			hatUp.z * hatVerticalOffset
+		);
+		const FVector baseCenter = hatOrigin;
+		const FVector tipWorld = hatOrigin + FVector(hatUp.x * hatHeight, hatUp.y * hatHeight, hatUp.z * hatHeight);
 
 		FVector2D screenTip;
 		if (!unreal.WorldToScreen(viewInfo, tipWorld, screenTip, displaySize.x, displaySize.y)) continue;
 
 		drawList->AddCircleFilled(ImVec2(screenTip.x, screenTip.y), 4.0f, IM_COL32(255, 0, 0, 255));
 
+		FVector brimRight = FVector(1.f, 0.f, 0.f);
+		if (std::abs(hatUp.z) > 0.95f) {
+			brimRight = FVector(0.f, 1.f, 0.f);
+		}
+
+		FVector brimForward = FVector(
+			hatUp.y * brimRight.z - hatUp.z * brimRight.y,
+			hatUp.z * brimRight.x - hatUp.x * brimRight.z,
+			hatUp.x * brimRight.y - hatUp.y * brimRight.x
+		);
+
+		const float brimForwardLength = std::sqrt(
+			brimForward.x * brimForward.x +
+			brimForward.y * brimForward.y +
+			brimForward.z * brimForward.z
+		);
+
+		if (brimForwardLength <= 0.001f) continue;
+
+		brimForward = FVector(
+			brimForward.x / brimForwardLength,
+			brimForward.y / brimForwardLength,
+			brimForward.z / brimForwardLength
+		);
+
+		brimRight = FVector(
+			brimForward.y * hatUp.z - brimForward.z * hatUp.y,
+			brimForward.z * hatUp.x - brimForward.x * hatUp.z,
+			brimForward.x * hatUp.y - brimForward.y * hatUp.x
+		);
+
 		FVector2D lastScreenEdge{};
 		bool hasLastEdge = false;
 
 		for (int i = 0; i <= segments; i++) {
-			float angle = (static_cast<float>(i) / static_cast<float>(segments)) * twoPi;
+			const float angle = (static_cast<float>(i) / static_cast<float>(segments)) * twoPi;
+			const float cosAngle = std::cos(angle);
+			const float sinAngle = std::sin(angle);
 
-			FVector edgeWorld = baseCenter + FVector(
-				std::cos(angle) * hatRadius,
-				std::sin(angle) * hatRadius,
-				0
+			const FVector edgeWorld = baseCenter + FVector(
+				(brimRight.x * cosAngle + brimForward.x * sinAngle) * hatRadius,
+				(brimRight.y * cosAngle + brimForward.y * sinAngle) * hatRadius,
+				(brimRight.z * cosAngle + brimForward.z * sinAngle) * hatRadius
 			);
 
 			FVector2D screenEdge;
@@ -388,7 +531,7 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 				continue;
 			}
 
-			ImColor color = ImColor::HSV(static_cast<float>(i) / segments, 1.0f, 1.0f);
+			const ImColor color = ImColor::HSV(static_cast<float>(i) / segments, 1.0f, 1.0f);
 
 			drawList->AddLine(ImVec2(screenTip.x, screenTip.y), ImVec2(screenEdge.x, screenEdge.y), color, 1.0f);
 
@@ -400,7 +543,6 @@ void ESP::renderChineseHat(const std::vector<TrackedActor>& actors, const FMinim
 		}
 	}
 }
-
 void ESP::renderFoV(float fov) {
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;

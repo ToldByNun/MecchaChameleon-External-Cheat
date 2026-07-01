@@ -23,6 +23,7 @@ static void renderEspSettings() {
 	Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
 	Custom::Toggle("Box ESP", &globals.settings.esp.box);
 	Custom::Toggle("Corner ESP", &globals.settings.esp.corners);
+	Custom::Toggle("Dynamic Boxes", &globals.settings.esp.dynamicBoxes);
 	Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
 	Custom::Toggle("Chinese Hat", &globals.settings.esp.chineseHat);
 	Custom::Toggle("Name", &globals.settings.esp.name);
