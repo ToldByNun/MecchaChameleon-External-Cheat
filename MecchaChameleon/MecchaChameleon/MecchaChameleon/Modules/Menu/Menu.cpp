@@ -13,13 +13,33 @@
 #include "../../Engine/ImGui/Custom/ColorPicker.hpp"
 #include "../../Engine/ImGui/Custom/MultiCombo.hpp"
 
-static int activeCategory = 0;
+struct MenuGenerals {
+	enum MenuCategory {
+		COMBAT,
+		VISUALS,
+		EXPLOITS,
+		TAB_COUNT
+	};
 
-static const char* categories[] = { "Combat", "Visuals" };
-static const char* teamOptions[] = { "Enemy", "Teammate" };
+	static inline int activeCategory = 0;
 
-static const char* hitboxOptions[] = {
-	"Head", "Chest", "Stomach", "Hip", "Left Arm", "Right Arm", "Left Knee", "Right Knee"
+	static inline const char* categories[] = {
+		"Combat", "Visuals", "Exploits"
+	};
+
+	static inline const char* teamOptions[] = {
+		"Enemy", "Teammate"
+	};
+
+	static inline const char* hitboxOptions[] = {
+		"Head", "Chest", "Stomach", "Hip", "Left Arm", "Right Arm", "Left Knee", "Right Knee"
+	};
+
+	static void renderColorWidget(const char* name, ImVec4& defaultColor, ImVec4& enemyColor) {
+		globals.settings.esp.selectedTeam == 0 ?
+			Custom::ColorPicker(name, &defaultColor) :
+			Custom::ColorPicker(name, &enemyColor);
+	}
 };
 
 void Menu::handleInput() {
@@ -27,47 +47,80 @@ void Menu::handleInput() {
 		globals.settings.menuOpen = !globals.settings.menuOpen;
 }
 
-static void renderColorWidget(const char* name, ImVec4& defaultColor, ImVec4& enemyColor) {
-	globals.settings.esp.selectedTeam == 0 ? 
-		Custom::ColorPicker(name, &defaultColor) :
-		Custom::ColorPicker(name, &enemyColor);
+struct ESPTab {
+	static void renderEspSettings() {
+		Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
+		Custom::Toggle("Minimap", &globals.settings.esp.minimap);
+		Custom::Toggle("Box ESP", &globals.settings.esp.box);
+		Custom::Toggle("Corner ESP", &globals.settings.esp.corners);
+		MenuGenerals::renderColorWidget("Box Color", globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor);
+		Custom::Toggle("Dynamic Boxes", &globals.settings.esp.dynamicBoxes);
+		Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
+		MenuGenerals::renderColorWidget("Skeleton Color", globals.settings.esp.defaultSkeletonColor, globals.settings.esp.enemySkeletonColor);
+		Custom::Toggle("Chinese Hat", &globals.settings.esp.chineseHat);
+		Custom::Toggle("Name", &globals.settings.esp.name);
+		Custom::Toggle("Distance", &globals.settings.esp.distance);
+		Custom::Toggle("Snaplines", &globals.settings.esp.snaplines);
+		MenuGenerals::renderColorWidget("Snaplines Color", globals.settings.esp.defaultSnaplineColor, globals.settings.esp.enemySnaplineColor);
+	}
+
+	static void renderEspOptions() {
+		Custom::Dropdown("Team", &globals.settings.esp.selectedTeam, MenuGenerals::teamOptions, IM_ARRAYSIZE(MenuGenerals::teamOptions));
+		Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);
+		Custom::Toggle("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
+		Custom::Toggle("Hide Enemies MM", &globals.settings.esp.hideEnemiesMM);
+		Custom::Toggle("Hide Teammates MM", &globals.settings.esp.hideTeammatesMM);
+		MenuGenerals::renderColorWidget("Minimap Color", globals.settings.esp.defaultMMColor, globals.settings.esp.enemyMMColor);
+	}
+};
+
+struct AimbotTab {
+	static void renderAimbotSettings() {
+		Custom::Toggle("Enabled", &globals.settings.aimbot.enabled);
+		Custom::Toggle("FOV limit", &globals.settings.aimbot.fovLimit);
+		Custom::Toggle("Smoothing", &globals.settings.aimbot.smoothing);
+	}
+
+	static void renderAimbotOptions() {
+		Custom::MultiCombo("Hitboxes", &globals.settings.aimbot.hitboxMask, MenuGenerals::hitboxOptions, kHitboxFlagCount);
+		Custom::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
+		Custom::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
+	}
+};
+
+struct ExploitTab {
+	static void renderExploitsSettings() {
+		///////////
+	}
+
+	static void renderExploitsOptions() {
+		///////////
+	}
+};
+
+static const char* getLeftSectionTitle(int category) {
+	switch (category) {
+	case MenuGenerals::COMBAT:   return "Aimbot";
+	case MenuGenerals::VISUALS:  return "ESP";
+	case MenuGenerals::EXPLOITS: return "Exploits";
+	default: return "";
+	}
 }
 
-static void renderEspSettings() {
-	Custom::Toggle("Show FoV", &globals.settings.esp.fovCircle);
-	Custom::Toggle("Minimap", &globals.settings.esp.minimap);
-	Custom::Toggle("Box ESP", &globals.settings.esp.box);
-	Custom::Toggle("Corner ESP", &globals.settings.esp.corners);
-	renderColorWidget("Box Color", globals.settings.esp.defaultBoxColor, globals.settings.esp.enemyBoxColor);
-	Custom::Toggle("Dynamic Boxes", &globals.settings.esp.dynamicBoxes);
-	Custom::Toggle("Skeleton ESP", &globals.settings.esp.skeleton);
-	renderColorWidget("Skeleton Color", globals.settings.esp.defaultSkeletonColor, globals.settings.esp.enemySkeletonColor);
-	Custom::Toggle("Chinese Hat", &globals.settings.esp.chineseHat);
-	Custom::Toggle("Name", &globals.settings.esp.name);
-	Custom::Toggle("Distance", &globals.settings.esp.distance);
-	Custom::Toggle("Snaplines", &globals.settings.esp.snaplines);
-	renderColorWidget("Snaplines Color", globals.settings.esp.defaultSnaplineColor, globals.settings.esp.enemySnaplineColor);
+static void renderLeftSection(int category) {
+	switch (category) {
+	case MenuGenerals::COMBAT:   AimbotTab::renderAimbotSettings(); break;
+	case MenuGenerals::VISUALS:  ESPTab::renderEspSettings(); break;
+	case MenuGenerals::EXPLOITS: ExploitTab::renderExploitsSettings(); break;
+	}
 }
 
-static void renderEspOptions() {
-	Custom::Dropdown("Team", &globals.settings.esp.selectedTeam, teamOptions, IM_ARRAYSIZE(teamOptions));
-	Custom::Toggle("Hide Teammates", &globals.settings.esp.onlyEnemies);
-	Custom::Toggle("Change Enemy Color", &globals.settings.esp.isTeammateColorEnabled);
-	Custom::Toggle("Hide Enemies MM", &globals.settings.esp.hideEnemiesMM);
-	Custom::Toggle("Hide Teammates MM", &globals.settings.esp.hideTeammatesMM);
-	renderColorWidget("Minimap Color", globals.settings.esp.defaultMMColor, globals.settings.esp.enemyMMColor);
-}
-
-static void renderAimbotSettings() {
-	Custom::Toggle("Enabled", &globals.settings.aimbot.enabled);
-	Custom::Toggle("FOV limit", &globals.settings.aimbot.fovLimit);
-	Custom::Toggle("Smoothing", &globals.settings.aimbot.smoothing);
-}
-
-static void renderAimbotOptions() {
-	Custom::MultiCombo("Hitboxes", &globals.settings.aimbot.hitboxMask, hitboxOptions, kHitboxFlagCount);
-	Custom::SliderFloat("FOV", &globals.settings.aimbot.fov, 1.f, 180.f, "%.0f");
-	Custom::SliderFloat("Smooth", &globals.settings.aimbot.smooth, 1.f, 20.f, "%.1f");
+static void renderRightSection(int category) {
+	switch (category) {
+	case MenuGenerals::COMBAT:   AimbotTab::renderAimbotOptions(); break;
+	case MenuGenerals::VISUALS:  ESPTab::renderEspOptions(); break;
+	case MenuGenerals::EXPLOITS: ExploitTab::renderExploitsOptions(); break;
+	}
 }
 
 void Menu::render() {
@@ -98,7 +151,13 @@ void Menu::render() {
 	if (!Custom::BeginMainGui("MecchaChameleon", &globals.settings.menuOpen, mainPreset))
 		return;
 
-	Custom::TopBar("MecchaChameleon", categories, 2, &activeCategory, topPreset);
+	Custom::TopBar(
+		"MecchaChameleon",
+		MenuGenerals::categories,
+		MenuGenerals::TAB_COUNT,
+		&MenuGenerals::activeCategory,
+		topPreset
+	);
 
 	const float contentHeight = Custom::GetContentHeight(topPreset.height, footerPreset.height);
 	const float contentWidth = ImGui::GetWindowWidth() - mainPreset.padding.x * 2.f;
@@ -111,19 +170,13 @@ void Menu::render() {
 	const float sectionHeight = availHeight - sectionMargin * 2.f;
 	Custom::BeginSectionDualLayout(sectionHeight);
 
-	if (Custom::BeginSectionDualLeft(activeCategory == 0 ? "Aimbot" : "ESP")) {
-		if (activeCategory == 0)
-			renderAimbotSettings();
-		else
-			renderEspSettings();
+	if (Custom::BeginSectionDualLeft(getLeftSectionTitle(MenuGenerals::activeCategory))) {
+		renderLeftSection(MenuGenerals::activeCategory);
 	}
 	Custom::EndSectionDualLeft();
 
 	if (Custom::BeginSectionDualRight("Options")) {
-		if (activeCategory == 0)
-			renderAimbotOptions();
-		else
-			renderEspOptions();
+		renderRightSection(MenuGenerals::activeCategory);
 	}
 	Custom::EndSectionDualRight();
 
